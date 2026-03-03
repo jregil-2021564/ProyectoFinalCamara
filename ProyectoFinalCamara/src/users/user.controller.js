@@ -20,7 +20,7 @@ const ensureAdmin = async (req) => {
 };
 
 /**
- * Controller para obtener todos los usuarios (público - SIN AUTENTICACION)
+ * Controller para obtener todos los usuarios (público - SIN Autenticacion)
  * GET /api/v1/users
  */
 export const getAllUsers = asyncHandler(async (req, res) => {
