@@ -10,7 +10,7 @@ const router = Router();
 
 router.get('/', getAllUsers);
 
-//PUT /api/v1/users/:userId/role
+// PUT /api/v1/users/:userId/role
 router.put('/:userId/role', ...updateUserRole);
 
 // GET /api/v1/users/:userId/roles
