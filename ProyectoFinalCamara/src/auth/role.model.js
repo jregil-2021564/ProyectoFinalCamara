@@ -22,7 +22,7 @@ export const Role = sequelize.define(
         notEmpty: { msg: 'El nombre del rol es obligatorio.' },
         isIn: {
           args: [ALLOWED_ROLES],
-          msg: 'Este Rol no es permitido. Use ADMIN_ROLE o USER_ROLE.',
+          msg: 'Rol no permitido. Use ADMIN_ROLE o USER_ROLE.',
         },
       },
     },
