@@ -11,7 +11,7 @@ import { asyncHandler } from '../../middlewares/server-genericError-handler.js';
 
 export const register = asyncHandler(async (req, res) => {
   try {
-    // Agregar la imagen de perfil si fue subida al cloudinary
+    // Agregar la imagen de perfil si fue subida al cloudinaryy
     const userData = {
       ...req.body,
       profilePicture: req.file ? req.file.path : null,
