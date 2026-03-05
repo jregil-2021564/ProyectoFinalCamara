@@ -9,7 +9,7 @@ if not cap.isOpened():
 else:
     print("Cámara conectada correctamente")
 
-print("Leyendo frames...")
+print("Leyendo los frames...")
 
 while True:
     ret, frame = cap.read()
