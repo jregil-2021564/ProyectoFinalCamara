@@ -1,0 +1,401 @@
+{
+  "info": {
+    "_postman_id": "f3df96aa-fb5b-4fd9-950d-741af339a816",
+    "name": "ProyectoFinalCamaras",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "48332520",
+    "_collection_link": "https://go.postman.co/collection/48332520-f3df96aa-fb5b-4fd9-950d-741af339a816?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Autentificación",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "name",
+                  "value": "Alejandro",
+                  "type": "text",
+                  "uuid": "abd4919a-12c1-42f8-9b5a-58e08777b1e6"
+                },
+                {
+                  "key": "surname",
+                  "value": "Arocha",
+                  "type": "text",
+                  "uuid": "77403613-e2e1-47a3-8744-71a40b0581f5"
+                },
+                {
+                  "key": "username",
+                  "value": "Alejoap365",
+                  "type": "text",
+                  "uuid": "2d80689a-f74c-4508-9e34-5cb449cfe378"
+                },
+                {
+                  "key": "email",
+                  "value": "alejandroarochavirula@gmail.com",
+                  "type": "text",
+                  "uuid": "9a49a1de-8480-43e7-9d0a-ce07a305e2df"
+                },
+                {
+                  "key": "password",
+                  "value": "Lolita151223",
+                  "type": "text",
+                  "uuid": "1642bca5-d0fc-44f2-94c6-98e955eab3ac"
+                },
+                {
+                  "key": "phone",
+                  "value": "42653798",
+                  "type": "text",
+                  "uuid": "d979400e-608e-421b-9e77-2418390d384b"
+                },
+                {
+                  "key": "profilePicture",
+                  "type": "file",
+                  "uuid": "1b06eab3-532c-409a-a743-959b7a2574f1",
+                  "src": "/C:/Users/estua/Downloads/moni.jpg"
+                }
+              ]
+            },
+            "url": {
+              "raw": "http://localhost:3005/api/v1/auth/register",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3005",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "resend-verification",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"email\": \"alejandroarochavirula@gmail.com\"\r\n}\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3005/api/v1/auth/resend-verification",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3005",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "resend-verification"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "verify-email",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"token\": \"TOKEN_DEL_CORREO\"\r\n}\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3005/api/v1/auth/verify-email",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3005",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "verify-email"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"emailOrUsername\": \"alejandroarochavirula@gmail.com\",\r\n  \"password\": \"Lolita151223\"\r\n}\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3005/api/v1/auth/login",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3005",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "forgot-password",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"email\": \"alejandroarochavirula@gmail.com\"\r\n}\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3005/api/v1/auth/forgot-password",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3005",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "forgot-password"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "reset-password",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"token\": \"TOKEN_DEL_CORREO\",\r\n  \"newPassword\": \"NuevaPassword123\"\r\n}\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3005/api/v1/auth/reset-password",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3005",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "reset-password"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "users-list",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Request Role Change",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"targetUserId\": \"ID_USUARIO\",\r\n  \"newRole\": \"ADMIN_ROLE\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3005/api/v1/auth/request-role-change",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3005",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "request-role-change"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Verify Role Change",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"token\": \"TOKEN_DE_VERIFICACION\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3005/api/v1/auth/verify-role-change",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3005",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "verify-role-change"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Entidades",
+      "item": [
+        {
+          "name": "Vehiculos",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3005/api/v1/trafico/vehiculos",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3005",
+              "path": [
+                "api",
+                "v1",
+                "trafico",
+                "vehiculos"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Infracciones",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"placa\": \"P-123ABC\",\r\n  \"velocidad\": 85,\r\n  \"paso_rojo\": true\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3005/api/v1/trafico/infracciones",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3005",
+              "path": [
+                "api",
+                "v1",
+                "trafico",
+                "infracciones"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Multa",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3005/api/v1/trafico/multas",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3005",
+              "path": [
+                "api",
+                "v1",
+                "trafico",
+                "multas"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Ver multa por placa",
+          "request": {
+            "method": "GET",
+            "header": []
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
