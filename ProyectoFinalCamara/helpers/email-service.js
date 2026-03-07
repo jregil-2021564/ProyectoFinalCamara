@@ -148,3 +148,85 @@ export const sendPasswordChangedEmail = async (email, name) => {
     throw error;
   }
 };
+
+export const sendDepositoSolicitudAdmin = async ({
+  solicitudId, usuarioNombre, usuarioEmail, monto, numeroCuenta,
+}) => {
+  if (!transporter) throw new Error('SMTP transporter not configured');
+
+  const adminEmail = process.env.SMTP_USERNAME;
+
+  await transporter.sendMail({
+    from:    `${config.smtp.fromName} <${config.smtp.fromEmail}>`,
+    to:      adminEmail,
+    subject: `Nueva solicitud de depósito - ${usuarioNombre}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #2c3e50;">📥 Nueva Solicitud de Depósito</h2>
+        <table style="width:100%; border-collapse: collapse;">
+          <tr><td style="padding:8px; border:1px solid #ddd;"><strong>ID Solicitud</strong></td><td style="padding:8px; border:1px solid #ddd;">${solicitudId}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #ddd;"><strong>Usuario</strong></td><td style="padding:8px; border:1px solid #ddd;">${usuarioNombre}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #ddd;"><strong>Email</strong></td><td style="padding:8px; border:1px solid #ddd;">${usuarioEmail}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #ddd;"><strong>Cuenta</strong></td><td style="padding:8px; border:1px solid #ddd;">${numeroCuenta}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #ddd;"><strong>Monto Solicitado</strong></td><td style="padding:8px; border:1px solid #ddd; color: #27ae60;"><strong>Q${monto.toFixed(2)}</strong></td></tr>
+        </table>
+        <br/>
+        <p>Para procesar esta solicitud usa los siguientes endpoints en tu sistema:</p>
+        <p>✅ <strong>Aprobar:</strong> POST /api/v1/cuenta/aprobar-deposito → <code>{ "solicitudId": "${solicitudId}" }</code></p>
+        <p>❌ <strong>Rechazar:</strong> POST /api/v1/cuenta/rechazar-deposito → <code>{ "solicitudId": "${solicitudId}", "motivo": "..." }</code></p>
+      </div>
+    `,
+  });
+};
+
+export const sendDepositoAprobado = async ({
+  usuarioNombre, usuarioEmail, monto, token, tokenExpiry,
+}) => {
+  if (!transporter) throw new Error('SMTP transporter not configured');
+
+  const expiracion = new Date(tokenExpiry).toLocaleString('es-GT');
+
+  await transporter.sendMail({
+    from:    `${config.smtp.fromName} <${config.smtp.fromEmail}>`,
+    to:      usuarioEmail,
+    subject: '✅ Tu solicitud de depósito fue aprobada',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #27ae60;">✅ Depósito Aprobado</h2>
+        <p>Hola <strong>${usuarioNombre}</strong>,</p>
+        <p>Tu solicitud de depósito por <strong style="color: #27ae60;">Q${monto.toFixed(2)}</strong> ha sido <strong>aprobada</strong>.</p>
+        <p>Usa el siguiente token para confirmar tu depósito:</p>
+        <div style="background: #f4f4f4; padding: 15px; border-radius: 5px; word-break: break-all; font-family: monospace; font-size: 14px;">
+          ${token}
+        </div>
+        <p style="color: #e74c3c;">⚠️ Este token expira el: <strong>${expiracion}</strong></p>
+        <p>Para confirmar tu depósito, envía una petición a:</p>
+        <p><strong>POST /api/v1/cuenta/confirmar-deposito</strong></p>
+        <p>Con el body: <code>{ "token": "${token}" }</code></p>
+        <p>Si no solicitaste este depósito, ignora este correo.</p>
+      </div>
+    `,
+  });
+};
+
+export const sendDepositoRechazado = async ({
+  usuarioNombre, usuarioEmail, monto, motivo,
+}) => {
+  if (!transporter) throw new Error('SMTP transporter not configured');
+
+  await transporter.sendMail({
+    from:    `${config.smtp.fromName} <${config.smtp.fromEmail}>`,
+    to:      usuarioEmail,
+    subject: '❌ Tu solicitud de depósito fue rechazada',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #e74c3c;">❌ Depósito Rechazado</h2>
+        <p>Hola <strong>${usuarioNombre}</strong>,</p>
+        <p>Tu solicitud de depósito por <strong>Q${monto.toFixed(2)}</strong> ha sido <strong>rechazada</strong>.</p>
+        <p><strong>Motivo:</strong> ${motivo}</p>
+        <p>Puedes realizar una nueva solicitud cuando lo desees.</p>
+        <p>Si tienes dudas, contacta al administrador.</p>
+      </div>
+    `,
+  });
+};

@@ -69,6 +69,15 @@ export const validateRegister = [
     .matches(/^\d{8}$/)
     .withMessage('El número de teléfono debe tener exactamente 8 dígitos'),
 
+  
+  body('placa')
+    .notEmpty()
+    .withMessage('La placa del vehículo es obligatoria')
+    .isLength({ min: 3, max: 20 })
+    .withMessage('La placa debe tener entre 3 y 20 caracteres')
+    .matches(/^[a-zA-Z0-9\-]+$/)
+    .withMessage('La placa solo puede contener letras, números y guiones'),
+
   handleValidationErrors,
 ];
 
@@ -147,17 +156,18 @@ export const isAdmin = async (req, res, next) => {
       });
     }
 
-    // Importar modelos necesarios
-    const { UserRole } = await import('../src/auth/role.model.js');
-    const { Role } = await import('../src/auth/role.model.js');
+    const { UserRole, Role } = await import('../src/auth/role.model.js');
 
-    // Buscar el rol del usuario desde la tabla user_roles
-    const userRole = await UserRole.findOne({
+    const userRoles = await UserRole.findAll({
       where: { UserId: req.user.Id },
       include: [{ model: Role, as: 'Role' }]
     });
 
-    if (!userRole || userRole.Role?.Name !== 'ADMIN_ROLE') {
+    console.log('ROLES DEL USUARIO:', userRoles.map(ur => ur.Role?.Name));
+
+    const isAdminRole = userRoles.some(ur => ur.Role?.Name === 'ADMIN_ROLE');
+
+    if (!isAdminRole) {
       return res.status(403).json({
         success: false,
         message: 'Solo administradores pueden realizar esta acción'

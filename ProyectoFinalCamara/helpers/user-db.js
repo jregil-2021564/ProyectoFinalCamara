@@ -86,8 +86,7 @@ export const createNewUser = async (userData) => {
   const transaction = await User.sequelize.transaction();
 
   try {
-    const { name, surname, username, email, password, phone, profilePicture } =
-      userData;
+    const { name, surname, username, email, password, phone, profilePicture, placa } = userData;
 
     const hashedPassword = await hashPassword(password);
 
@@ -99,7 +98,7 @@ export const createNewUser = async (userData) => {
         Username: username.toLowerCase(),
         Email: email.toLowerCase(),
         Password: hashedPassword,
-        Status: false, // Empieza desactivado hasta que verifique el email
+        Status: false,
       },
       { transaction }
     );
@@ -115,6 +114,7 @@ export const createNewUser = async (userData) => {
         UserId: user.Id,
         Phone: phone,
         ProfilePicture: profilePicture || defaultAvatarFilename,
+        Placa: placa || null,
       },
       { transaction }
     );
@@ -136,7 +136,7 @@ export const createNewUser = async (userData) => {
       { transaction }
     );
 
-    // Asignar rol USER_ROLE por defecto (matching .NET DataSeeder)
+    // Asignar rol USER_ROLE por defecto
     const userRole = await Role.findOne(
       { where: { Name: USER_ROLE } },
       { transaction }
@@ -156,6 +156,22 @@ export const createNewUser = async (userData) => {
     }
 
     await transaction.commit();
+
+    // ── Crear cuenta automáticamente después del commit ───────────────────────
+    try {
+      const { Cuenta } = await import('../src/cuenta/cuenta.model.js');
+      const timestamp  = Date.now().toString().slice(-8);
+      const random     = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+      await Cuenta.create({
+        UserId:       user.Id,
+        NumeroCuenta: `CTA-${timestamp}-${random}`,
+        Saldo:        0.00,
+      });
+      console.log(`✅ Cuenta creada automáticamente para usuario ${user.Id}`);
+    } catch (cuentaError) {
+      // No fallar el registro si la cuenta no se crea
+      console.error('⚠️  Error creando cuenta automática:', cuentaError.message);
+    }
 
     // Obtener el usuario completo con todas las relaciones
     const completeUser = await findUserById(user.Id);
@@ -188,7 +204,6 @@ export const markEmailAsVerified = async (userId) => {
   const transaction = await User.sequelize.transaction();
 
   try {
-    // Marcar email como verificado
     await UserEmail.update(
       {
         EmailVerified: true,
@@ -201,7 +216,6 @@ export const markEmailAsVerified = async (userId) => {
       }
     );
 
-    // Activar el usuario
     await User.update(
       {
         Status: true,
@@ -222,7 +236,7 @@ export const markEmailAsVerified = async (userId) => {
 
 export const updatePasswordResetToken = async (userId, token, expiry) => {
   try {
-    await UserPasswordReset.update(
+    await UserEmail.update(
       {
         PasswordResetToken: token,
         PasswordResetTokenExpiry: expiry,
@@ -260,11 +274,6 @@ export const findUserByEmail = async (email) => {
   }
 };
 
-/**
- * Helper para buscar un usuario por token de verificación de email (matching .NET)
- * @param {string} token - Token de verificación de email
- * @returns {Promise<Object|null>} Usuario encontrado o null
- */
 export const findUserByEmailVerificationToken = async (token) => {
   try {
     const user = await User.findOne({
@@ -275,18 +284,12 @@ export const findUserByEmailVerificationToken = async (token) => {
           where: {
             EmailVerificationToken: token,
             EmailVerificationTokenExpiry: {
-              [Op.gt]: new Date(), // Token no expirado
+              [Op.gt]: new Date(),
             },
           },
         },
-        {
-          model: UserProfile,
-          as: 'UserProfile',
-        },
-        {
-          model: UserPasswordReset,
-          as: 'UserPasswordReset',
-        },
+        { model: UserProfile,      as: 'UserProfile' },
+        { model: UserPasswordReset, as: 'UserPasswordReset' },
       ],
     });
 
@@ -297,11 +300,6 @@ export const findUserByEmailVerificationToken = async (token) => {
   }
 };
 
-/**
- * Helper para buscar un usuario por token de reset de password (matching .NET)
- * @param {string} token - Token de reset de password
- * @returns {Promise<Object|null>} Usuario encontrado o null
- */
 export const findUserByPasswordResetToken = async (token) => {
   try {
     const user = await User.findOne({
@@ -312,18 +310,12 @@ export const findUserByPasswordResetToken = async (token) => {
           where: {
             PasswordResetToken: token,
             PasswordResetTokenExpiry: {
-              [Op.gt]: new Date(), // Token no expirado
+              [Op.gt]: new Date(),
             },
           },
         },
-        {
-          model: UserProfile,
-          as: 'UserProfile',
-        },
-        {
-          model: UserEmail,
-          as: 'UserEmail',
-        },
+        { model: UserProfile, as: 'UserProfile' },
+        { model: UserEmail,   as: 'UserEmail' },
       ],
     });
 
@@ -338,27 +330,14 @@ export const updateUserPassword = async (userId, hashedPassword) => {
   const transaction = await User.sequelize.transaction();
 
   try {
-    // Actualizar contraseña
     await User.update(
-      {
-        Password: hashedPassword,
-      },
-      {
-        where: { Id: userId },
-        transaction,
-      }
+      { Password: hashedPassword },
+      { where: { Id: userId }, transaction }
     );
 
-    // Limpiar token de reset
     await UserPasswordReset.update(
-      {
-        PasswordResetToken: null,
-        PasswordResetTokenExpiry: null,
-      },
-      {
-        where: { UserId: userId },
-        transaction,
-      }
+      { PasswordResetToken: null, PasswordResetTokenExpiry: null },
+      { where: { UserId: userId }, transaction }
     );
 
     await transaction.commit();
@@ -369,16 +348,12 @@ export const updateUserPassword = async (userId, hashedPassword) => {
   }
 };
 
-/**
- * Helper para obtener todos los usuarios (público)
- * @returns {Promise<Array>} Lista de usuarios
- */
 export const getAllUsersPublic = async () => {
   try {
     const users = await User.findAll({
       include: [
         { model: UserProfile, as: 'UserProfile' },
-        { model: UserEmail, as: 'UserEmail' },
+        { model: UserEmail,   as: 'UserEmail' },
         {
           model: UserRole,
           as: 'UserRoles',

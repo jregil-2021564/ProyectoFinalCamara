@@ -16,10 +16,12 @@ export const buildUserResponse = (user) => {
     surname: user.Surname,
     username: user.Username,
     email: user.Email,
-    phone:
-      user.UserProfile && user.UserProfile.Phone ? user.UserProfile.Phone : '',
+    phone: user.UserProfile?.Phone ?? '',
+    placa: user.UserProfile?.Placa ?? null,
     profilePicture: profilePictureUrl,
-    role: user.UserRoles?.[0]?.Role?.Name ?? 'USER_ROLE',
+    role: user.UserRoles?.map((ur) => ur.Role?.Name).filter(Boolean).includes('ADMIN_ROLE')
+      ? 'ADMIN_ROLE'
+      : (user.UserRoles?.[0]?.Role?.Name ?? 'USER_ROLE'),
     status: user.Status,
     isEmailVerified: user.UserEmail ? user.UserEmail.EmailVerified : false,
     createdAt: user.CreatedAt,

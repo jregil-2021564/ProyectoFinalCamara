@@ -43,9 +43,10 @@ const getExpirationTime = (timeString) => {
 
 export const registerUserHelper = async (userData) => {
   try {
-    const { email, username, password, name, surname, phone, profilePicture } =
-      userData;
+    const { email, username, password, name, surname, phone, profilePicture, placa } = userData;
 
+console.log('PLACA RECIBIDA:', placa); // ← agrega esto
+console.log('USERDATA COMPLETO:', userData); // ← y esto
     // Validation is now handled by express-validator middleware in routes
     const userExists = await checkUserExists(email, username);
     if (userExists) {
@@ -68,7 +69,7 @@ export const registerUserHelper = async (userData) => {
           // CORRECCIÓN CRÍTICA: Normalizar la ruta del archivo antes de subirlo
           // Convertir barras invertidas a barras normales
           let normalizedPath = profilePicture.replace(/\\/g, '/');
-          
+
           // Si la ruta es relativa, convertirla a absoluta
           if (!path.isAbsolute(normalizedPath)) {
             normalizedPath = path.resolve(normalizedPath).replace(/\\/g, '/');
@@ -94,7 +95,7 @@ export const registerUserHelper = async (userData) => {
       } else {
         // Si viene una URL de Cloudinary, usarla directamente
         if (profilePicture.startsWith('https://res.cloudinary.com/') ||
-            profilePicture.startsWith('http://res.cloudinary.com/')) {
+          profilePicture.startsWith('http://res.cloudinary.com/')) {
           profilePictureToStore = profilePicture;
         } else {
           // Si no es URL completa ni archivo local, intentar normalizar
@@ -111,9 +112,9 @@ export const registerUserHelper = async (userData) => {
       email,
       password,
       phone,
-      profilePicture: profilePictureToStore,
+      profilePicture,
+      placa,       
     });
-
     // Generar token de verificación de email
     const verificationToken = await generateEmailVerificationToken();
     const tokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
@@ -181,7 +182,8 @@ export const loginUserHelper = async (emailOrUsername, password) => {
     }
 
     // Generate JWT with role claim
-    const role = user.UserRoles?.[0]?.Role?.Name || 'USER_ROLE';
+    const roles = user.UserRoles?.map((ur) => ur.Role?.Name).filter(Boolean) ?? [];
+    const role = roles.includes('ADMIN_ROLE') ? 'ADMIN_ROLE' : (roles[0] || 'USER_ROLE');
     const token = await generateJWT(user.Id.toString(), { role });
 
     // Calcular fecha de expiración basada en la configuración
