@@ -10,7 +10,6 @@ export const registrarInfraccion = async (req, res) => {
             placa,
             velocidad  = 0,
             paso_rojo  = false,
-            // Datos detectados por Claude IA
             modelo_ia,
             color_ia,
             anio_ia,
@@ -20,10 +19,8 @@ export const registrarInfraccion = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Placa requerida' });
         }
 
-        // Buscar vehículo registrado en PostgreSQL
         const vehiculo = await Vehiculo.findOne({ where: { placa: placa.toUpperCase() } });
 
-        // Si no está en BD pero la IA detectó datos, registrarlo automáticamente
         let vehiculoFinal = vehiculo;
         if (!vehiculo && modelo_ia && color_ia && anio_ia) {
             try {
@@ -39,7 +36,6 @@ export const registrarInfraccion = async (req, res) => {
             }
         }
 
-        // Calcular monto e infracciones
         let monto = 0;
         const tipo = [];
         if (paso_rojo)      { monto += 1500; tipo.push('Semáforo en rojo'); }
@@ -51,7 +47,6 @@ export const registrarInfraccion = async (req, res) => {
 
         const fuenteDatos = vehiculo ? 'Base de datos' : 'Detectado por IA';
 
-        // Guardar multa en MongoDB con todos los datos
         const multa = await Multa.create({
             placa:            placa.toUpperCase(),
             velocidad,
@@ -117,6 +112,189 @@ export const registrarVehiculo = async (req, res) => {
         if (err.name === 'SequelizeUniqueConstraintError') {
             return res.status(409).json({ success: false, message: 'Placa ya registrada' });
         }
+        return res.status(500).json({ success: false, error: err.message });
+    }
+};
+
+// ── Agregando parte Hugo Benjamín Samayoa Díaz - 2021462 ──────────────────────
+
+// GET /api/v1/trafico/buscar/:placa
+export const verMultasPorPlaca = async (req, res) => {
+    try {
+        const { placa } = req.params;
+
+        if (!placa) {
+            return res.status(400).json({ success: false, message: 'Placa requerida' });
+        }
+
+        const multas = await Multa.find({ placa: placa.toUpperCase() }).sort({ createdAt: -1 });
+
+        if (multas.length === 0) {
+            return res.status(404).json({ success: false, message: `No se encontraron multas para la placa ${placa.toUpperCase()}` });
+        }
+
+        return res.status(200).json({
+            success: true,
+            placa: placa.toUpperCase(),
+            total: multas.length,
+            multas: multas.map(m => ({
+                id:              m._id,
+                placa:           m.placa,
+                tipoInfraccion:  m.tipo_infraccion,
+                velocidad:       m.velocidad,
+                pasoRojo:        m.paso_rojo,
+                montoMulta:      `Q${parseFloat(m.monto_multa).toFixed(2)}`,
+                estado:          m.estado,
+                modeloDetectado: m.modelo_detectado,
+                colorDetectado:  m.color_detectado,
+                anioDetectado:   m.anio_detectado,
+                fecha:           m.createdAt,
+            })),
+        });
+    } catch (err) {
+        return res.status(500).json({ success: false, error: err.message });
+    }
+};
+
+// GET /api/v1/trafico/validar-saldo/:multaId
+export const validarSaldo = async (req, res) => {
+    try {
+        const { multaId } = req.params;
+
+        const multa = await Multa.findById(multaId);
+        if (!multa) {
+            return res.status(404).json({ success: false, message: 'Multa no encontrada' });
+        }
+
+        if (multa.estado !== 'PENDIENTE') {
+            return res.status(400).json({
+                success: false,
+                message: `Esta multa ya fue ${multa.estado.toLowerCase()}`,
+            });
+        }
+
+        const { Cuenta } = await import('../cuenta/cuenta.model.js');
+        const cuenta = await Cuenta.findOne({ where: { UserId: req.user.Id } });
+
+        if (!cuenta) {
+            return res.status(404).json({ success: false, message: 'No tienes una cuenta registrada' });
+        }
+
+        const saldoActual = parseFloat(cuenta.Saldo);
+        const montoMulta  = parseFloat(multa.monto_multa);
+        const tieneSaldo  = saldoActual >= montoMulta;
+
+        return res.status(200).json({
+            success: true,
+            multaId:     multa._id,
+            placa:       multa.placa,
+            montoMulta:  `Q${montoMulta.toFixed(2)}`,
+            saldoActual: `Q${saldoActual.toFixed(2)}`,
+            tieneSaldo,
+            message: tieneSaldo
+                ? 'Saldo suficiente para pagar la multa'
+                : `Saldo insuficiente. Te faltan Q${(montoMulta - saldoActual).toFixed(2)}`,
+        });
+    } catch (err) {
+        return res.status(500).json({ success: false, error: err.message });
+    }
+};
+
+// PUT /api/v1/trafico/aumentar-multas
+export const aumentarMultas = async (req, res) => {
+    try {
+        const haceCincoDias = new Date();
+        haceCincoDias.setDate(haceCincoDias.getDate() - 5);
+
+        const multasPendientes = await Multa.find({
+            estado: 'PENDIENTE',
+            createdAt: { $lte: haceCincoDias },
+        });
+
+        if (multasPendientes.length === 0) {
+            return res.status(200).json({
+                success: true,
+                message: 'No hay multas pendientes que requieran aumento',
+                actualizadas: 0,
+            });
+        }
+
+        const actualizaciones = multasPendientes.map(multa => {
+            const nuevoMonto = parseFloat((multa.monto_multa * 1.10).toFixed(2));
+            return Multa.findByIdAndUpdate(multa._id, { monto_multa: nuevoMonto }, { new: true });
+        });
+
+        const multasActualizadas = await Promise.all(actualizaciones);
+
+        return res.status(200).json({
+            success: true,
+            message: `Se aumentó 10% a ${multasActualizadas.length} multa(s) pendiente(s)`,
+            actualizadas: multasActualizadas.length,
+            detalle: multasActualizadas.map(m => ({
+                id:         m._id,
+                placa:      m.placa,
+                nuevoMonto: `Q${parseFloat(m.monto_multa).toFixed(2)}`,
+            })),
+        });
+    } catch (err) {
+        return res.status(500).json({ success: false, error: err.message });
+    }
+};
+
+// POST /api/v1/trafico/pagar/:multaId
+export const pagarMulta = async (req, res) => {
+    try {
+        const { multaId } = req.params;
+
+        const multa = await Multa.findById(multaId);
+        if (!multa) {
+            return res.status(404).json({ success: false, message: 'Multa no encontrada' });
+        }
+
+        if (multa.estado !== 'PENDIENTE') {
+            return res.status(400).json({
+                success: false,
+                message: `Esta multa ya fue ${multa.estado.toLowerCase()}`,
+            });
+        }
+
+        const { Cuenta } = await import('../cuenta/cuenta.model.js');
+        const cuenta = await Cuenta.findOne({ where: { UserId: req.user.Id } });
+
+        if (!cuenta) {
+            return res.status(404).json({ success: false, message: 'No tienes una cuenta registrada' });
+        }
+
+        const saldoActual = parseFloat(cuenta.Saldo);
+        const montoMulta  = parseFloat(multa.monto_multa);
+
+        if (saldoActual < montoMulta) {
+            return res.status(400).json({
+                success: false,
+                message: `Saldo insuficiente. Tu saldo es Q${saldoActual.toFixed(2)} y la multa es Q${montoMulta.toFixed(2)}`,
+                saldoActual: `Q${saldoActual.toFixed(2)}`,
+                montoMulta:  `Q${montoMulta.toFixed(2)}`,
+                falta:       `Q${(montoMulta - saldoActual).toFixed(2)}`,
+            });
+        }
+
+        const nuevoSaldo = saldoActual - montoMulta;
+        await cuenta.update({ Saldo: nuevoSaldo });
+        await multa.updateOne({ estado: 'PAGADA' });
+
+        return res.status(200).json({
+            success: true,
+            message: 'Multa pagada exitosamente',
+            recibo: {
+                placa:         multa.placa,
+                monto:         `Q${montoMulta.toFixed(2)}`,
+                fechaDePago:   new Date().toLocaleString('es-GT'),
+                saldoAnterior: `Q${saldoActual.toFixed(2)}`,
+                saldoActual:   `Q${nuevoSaldo.toFixed(2)}`,
+                estado:        'PAGADA',
+            },
+        });
+    } catch (err) {
         return res.status(500).json({ success: false, error: err.message });
     }
 };
