@@ -25,6 +25,7 @@ import cuentaRoutes from '../src/cuenta/cuenta.routes.js';
 import adminRolesRoutes from '../src/admin/admin.roles.routes.js';
 import pagosRoutes from '../src/pago/pago.routes.js';
 import saldoRoutes from '../src/saldo/saldo.routes.js';
+import camaraRoutes from '../src/camara/camara.routes.js';
 
 const BASE_PATH = '/api/v1';
 
@@ -45,6 +46,7 @@ const routes = (app) => {
   app.use(`${BASE_PATH}/cuenta`, cuentaRoutes);
   app.use(`${BASE_PATH}/pagos`, pagosRoutes);
   app.use(`${BASE_PATH}/saldo`, saldoRoutes);
+  app.use(`${BASE_PATH}/camara`, camaraRoutes);
 
   app.get(`${BASE_PATH}/health`, (req, res) => {
     res.status(200).json({
