@@ -24,6 +24,7 @@ import traficoRoutes from '../src/trafico/trafico.routes.js';
 import cuentaRoutes from '../src/cuenta/cuenta.routes.js';
 import adminRolesRoutes from '../src/admin/admin.roles.routes.js';
 import pagosRoutes from '../src/pago/pago.routes.js';
+import saldoRoutes from '../src/saldo/saldo.routes.js';
 
 const BASE_PATH = '/api/v1';
 
@@ -43,7 +44,8 @@ const routes = (app) => {
   app.use(`${BASE_PATH}/admin/roles`, adminRolesRoutes);
   app.use(`${BASE_PATH}/cuenta`, cuentaRoutes);
   app.use(`${BASE_PATH}/pagos`, pagosRoutes);
-  
+  app.use(`${BASE_PATH}/saldo`, saldoRoutes);
+
   app.get(`${BASE_PATH}/health`, (req, res) => {
     res.status(200).json({
       status: 'Healthy',
