@@ -1,10 +1,10 @@
 {
   "info": {
-    "_postman_id": "f3df96aa-fb5b-4fd9-950d-741af339a816",
+    "_postman_id": "9505c78b-a6df-4f8e-88d9-e0b8bbed9c1b",
     "name": "ProyectoFinalCamaras",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "_exporter_id": "48332520",
-    "_collection_link": "https://go.postman.co/collection/48332520-f3df96aa-fb5b-4fd9-950d-741af339a816?source=collection_link"
+    "_exporter_id": "48332491",
+    "_collection_link": "https://go.postman.co/collection/48332491-9505c78b-a6df-4f8e-88d9-e0b8bbed9c1b?source=collection_link"
   },
   "item": [
     {
@@ -20,25 +20,25 @@
               "formdata": [
                 {
                   "key": "name",
-                  "value": "Daniel",
+                  "value": "Joab",
                   "type": "text",
                   "uuid": "abd4919a-12c1-42f8-9b5a-58e08777b1e6"
                 },
                 {
                   "key": "surname",
-                  "value": "Maztur",
+                  "value": "Selvi",
                   "type": "text",
                   "uuid": "77403613-e2e1-47a3-8744-71a40b0581f5"
                 },
                 {
                   "key": "username",
-                  "value": "Maquitul",
+                  "value": "Joab_Selvi",
                   "type": "text",
                   "uuid": "2d80689a-f74c-4508-9e34-5cb449cfe378"
                 },
                 {
                   "key": "email",
-                  "value": "mazturdaniel@gmail.com",
+                  "value": "alejoselv403@gmail.com",
                   "type": "text",
                   "uuid": "9a49a1de-8480-43e7-9d0a-ce07a305e2df"
                 },
@@ -123,7 +123,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\r\n  \"token\": \"TOKEN_DEL_CORREO\"\r\n}\r\n",
+              "raw": "{\r\n  \"token\": \"uwrYTtXsXfhLKs4R9X8UfDYFukNWE-SJ-5lQO3f4MrY\"\r\n}\r\n",
               "options": {
                 "raw": {
                   "language": "json"
@@ -154,7 +154,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\r\n  \"emailOrUsername\": \"josealejandrovirulaarocha@gmail.com\",\r\n  \"password\": \"Admin1234!\"\r\n}\r\n",
+              "raw": "{\r\n  \"emailOrUsername\": \"alejoselv403@gmail.com\",\r\n  \"password\": \"Lolita151223\"\r\n}\r\n",
               "options": {
                 "raw": {
                   "language": "json"
@@ -248,7 +248,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3JfQXJRWllZUUNVMWthIiwianRpIjoiYmNhNWVmYTYtOGEwMC00MzE0LTg3MTItYjYyY2ZiMWQ3N2YxIiwiaWF0IjoxNzcyODQ4NjE5LCJyb2xlIjoiQURNSU5fUk9MRSIsImV4cCI6MTc3MjkzNTAxOSwiYXVkIjoiUHJveWVjdG9DYW1hcmEiLCJpc3MiOiJQcm95ZWN0b0NhbWFyYSJ9.3f02Wose2HHe_PNtQBGOjGaDVtrkFwMWEC9bAtByzrU",
+                  "value": "{{vault:authorization-secret}}",
                   "type": "string"
                 }
               ]
@@ -281,7 +281,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3JfQzJjemhUY0NualZDIiwianRpIjoiOWU2NzY4ZTItMjU5NS00YTIyLWI4NzMtMDcyZjlmMzUzNjQ3IiwiaWF0IjoxNzcyODQ2OTE3LCJyb2xlIjoiQURNSU5fUk9MRSIsImV4cCI6MTc3MjkzMzMxNywiYXVkIjoiUHJveWVjdG9DYW1hcmEiLCJpc3MiOiJQcm95ZWN0b0NhbWFyYSJ9.80R88t_GRg0AFZbJjW_sygWHkaPZ73ZNytbgE7dj0jQ",
+                  "value": "{{vault:authorization-secret}}",
                   "type": "string"
                 }
               ]
@@ -323,7 +323,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3JfQzJjemhUY0NualZDIiwianRpIjoiZWRlMjVmODEtNWU0Ni00YmI3LWI3MTYtZGI1YjM3ZWJhM2QwIiwiaWF0IjoxNzcyODQ1NDA4LCJyb2xlIjoiQURNSU5fUk9MRSIsImV4cCI6MTc3MjkzMTgwOCwiYXVkIjoiUHJveWVjdG9DYW1hcmEiLCJpc3MiOiJQcm95ZWN0b0NhbWFyYSJ9.CNnEJyOi3Mf-DUlDJpJ9y4RYT3OHGx_MEYLPuVrVml4",
+                  "value": "{{vault:authorization-secret}}",
                   "type": "string"
                 }
               ]
@@ -365,6 +365,272 @@
         {
           "name": "Menu usuarios",
           "item": [
+            {
+              "name": "tarjeta de credito",
+              "item": [
+                {
+                  "name": "Agregar TarjetaCredito",
+                  "request": {
+                    "auth": {
+                      "type": "bearer",
+                      "bearer": [
+                        {
+                          "key": "token",
+                          "value": "{{vault:authorization-secret}}",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "method": "POST",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\r\n  \"numeroTarjeta\":    \"6011 1111 1111 1117\",\r\n  \"fechaVencimiento\": \"12/29\",\r\n  \"cvv\":              \"123\",\r\n  \"nombreTitular\":    \"Juan Pérez\",\r\n  \"tipoTarjeta\":      \"CREDITO\",\r\n  \"limiteCredito\":    5000,\r\n  \"alias\":            \"Mi Visa personal\"\r\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "http://localhost:3005/api/v1/saldo/agregar-tarjeta",
+                      "protocol": "http",
+                      "host": [
+                        "localhost"
+                      ],
+                      "port": "3005",
+                      "path": [
+                        "api",
+                        "v1",
+                        "saldo",
+                        "agregar-tarjeta"
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Ver TarjetaCredito User",
+                  "protocolProfileBehavior": {
+                    "disableBodyPruning": true
+                  },
+                  "request": {
+                    "auth": {
+                      "type": "bearer",
+                      "bearer": [
+                        {
+                          "key": "token",
+                          "value": "{{vault:authorization-secret}}",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "method": "GET",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "http://localhost:3005/api/v1/saldo/mis-tarjetas",
+                      "protocol": "http",
+                      "host": [
+                        "localhost"
+                      ],
+                      "port": "3005",
+                      "path": [
+                        "api",
+                        "v1",
+                        "saldo",
+                        "mis-tarjetas"
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Eliminar TarjetaCredito",
+                  "request": {
+                    "auth": {
+                      "type": "bearer",
+                      "bearer": [
+                        {
+                          "key": "token",
+                          "value": "{{vault:authorization-secret}}",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "method": "DELETE",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "http://localhost:3005/api/v1/saldo/mis-tarjetas/69ac6af4cc768fb35e57dd22",
+                      "protocol": "http",
+                      "host": [
+                        "localhost"
+                      ],
+                      "port": "3005",
+                      "path": [
+                        "api",
+                        "v1",
+                        "saldo",
+                        "mis-tarjetas",
+                        "69ac6af4cc768fb35e57dd22"
+                      ]
+                    }
+                  },
+                  "response": []
+                }
+              ]
+            },
+            {
+              "name": "Recargas",
+              "item": [
+                {
+                  "name": "Agregar Recarga",
+                  "request": {
+                    "auth": {
+                      "type": "bearer",
+                      "bearer": [
+                        {
+                          "key": "token",
+                          "value": "{{vault:authorization-secret}}",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "method": "POST",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\r\n  \"tarjetaId\": \"69ac7386c06b2d9a51b134ac\",\r\n   \"monto\":     4000.00\r\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "http://localhost:3005/api/v1/saldo/recargar",
+                      "protocol": "http",
+                      "host": [
+                        "localhost"
+                      ],
+                      "port": "3005",
+                      "path": [
+                        "api",
+                        "v1",
+                        "saldo",
+                        "recargar"
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Listar Recargas",
+                  "protocolProfileBehavior": {
+                    "disableBodyPruning": true
+                  },
+                  "request": {
+                    "auth": {
+                      "type": "bearer",
+                      "bearer": [
+                        {
+                          "key": "token",
+                          "value": "{{vault:authorization-secret}}",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "method": "GET",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\r\n  \"tarjetaId\": \"69ac67e8b4dc048225abec80\",\r\n  \"monto\":     250.00\r\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "http://localhost:3005/api/v1/saldo/historial",
+                      "protocol": "http",
+                      "host": [
+                        "localhost"
+                      ],
+                      "port": "3005",
+                      "path": [
+                        "api",
+                        "v1",
+                        "saldo",
+                        "historial"
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Ver saldo",
+                  "protocolProfileBehavior": {
+                    "disableBodyPruning": true
+                  },
+                  "request": {
+                    "auth": {
+                      "type": "bearer",
+                      "bearer": [
+                        {
+                          "key": "token",
+                          "value": "{{vault:authorization-secret}}",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "method": "GET",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\r\n  \"tarjetaId\": \"69ac67e8b4dc048225abec80\",\r\n  \"monto\":     250.00\r\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "http://localhost:3005/api/v1/saldo/mi-saldo",
+                      "protocol": "http",
+                      "host": [
+                        "localhost"
+                      ],
+                      "port": "3005",
+                      "path": [
+                        "api",
+                        "v1",
+                        "saldo",
+                        "mi-saldo"
+                      ]
+                    }
+                  },
+                  "response": []
+                }
+              ]
+            },
             {
               "name": "Solicitar Deposito",
               "request": {
@@ -414,7 +680,7 @@
                   "bearer": [
                     {
                       "key": "token",
-                      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3JfOWlITmI1Y1BWcHpoIiwianRpIjoiMTI1Y2YwMzgtMzlhNC00NDliLWI2MDAtOTBhZmE5MjE3OTVjIiwiaWF0IjoxNzcyODU0NDk3LCJyb2xlIjoiVVNFUl9ST0xFIiwiZXhwIjoxNzcyOTQwODk3LCJhdWQiOiJQcm95ZWN0b0NhbWFyYSIsImlzcyI6IlByb3llY3RvQ2FtYXJhIn0.Nutx0jFA_Xih3t2WWmZET3un2GiVScKEMi6sLXgbFoE",
+                      "value": "{{vault:authorization-secret}}",
                       "type": "string"
                     }
                   ]
@@ -487,7 +753,7 @@
                   "bearer": [
                     {
                       "key": "token",
-                      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3JfOWlITmI1Y1BWcHpoIiwianRpIjoiMTI1Y2YwMzgtMzlhNC00NDliLWI2MDAtOTBhZmE5MjE3OTVjIiwiaWF0IjoxNzcyODU0NDk3LCJyb2xlIjoiVVNFUl9ST0xFIiwiZXhwIjoxNzcyOTQwODk3LCJhdWQiOiJQcm95ZWN0b0NhbWFyYSIsImlzcyI6IlByb3llY3RvQ2FtYXJhIn0.Nutx0jFA_Xih3t2WWmZET3un2GiVScKEMi6sLXgbFoE",
+                      "value": "{{vault:authorization-secret}}",
                       "type": "string"
                     }
                   ]
@@ -519,7 +785,7 @@
                   "bearer": [
                     {
                       "key": "token",
-                      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3JfOWlITmI1Y1BWcHpoIiwianRpIjoiMTI1Y2YwMzgtMzlhNC00NDliLWI2MDAtOTBhZmE5MjE3OTVjIiwiaWF0IjoxNzcyODU0NDk3LCJyb2xlIjoiVVNFUl9ST0xFIiwiZXhwIjoxNzcyOTQwODk3LCJhdWQiOiJQcm95ZWN0b0NhbWFyYSIsImlzcyI6IlByb3llY3RvQ2FtYXJhIn0.Nutx0jFA_Xih3t2WWmZET3un2GiVScKEMi6sLXgbFoE",
+                      "value": "{{vault:authorization-secret}}",
                       "type": "string"
                     }
                   ]
@@ -528,7 +794,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\r\n  \"multaId\": \"69a622f859960b2076d5c62f\"\r\n}",
+                  "raw": "{\r\n  \"multaId\": \"69ac7656c06b2d9a51b134b6\"\r\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -565,7 +831,7 @@
                   "bearer": [
                     {
                       "key": "token",
-                      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3JfNHQ0UnRpeVFFNURWIiwianRpIjoiYzRkNjEzMWItNDYxNS00MDcwLWFhNTAtMmE1MTEzM2MxNWJjIiwiaWF0IjoxNzcyODU0Njk0LCJyb2xlIjoiQURNSU5fUk9MRSIsImV4cCI6MTc3Mjk0MTA5NCwiYXVkIjoiUHJveWVjdG9DYW1hcmEiLCJpc3MiOiJQcm95ZWN0b0NhbWFyYSJ9.IKMpmEcsrbceZdybGN6ye9O3a412uZpFpAOC93tkwig",
+                      "value": "{{vault:authorization-secret}}",
                       "type": "string"
                     }
                   ]
@@ -647,7 +913,7 @@
                   "bearer": [
                     {
                       "key": "token",
-                      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3JfNHQ0UnRpeVFFNURWIiwianRpIjoiYzRkNjEzMWItNDYxNS00MDcwLWFhNTAtMmE1MTEzM2MxNWJjIiwiaWF0IjoxNzcyODU0Njk0LCJyb2xlIjoiQURNSU5fUk9MRSIsImV4cCI6MTc3Mjk0MTA5NCwiYXVkIjoiUHJveWVjdG9DYW1hcmEiLCJpc3MiOiJQcm95ZWN0b0NhbWFyYSJ9.IKMpmEcsrbceZdybGN6ye9O3a412uZpFpAOC93tkwig",
+                      "value": "{{vault:authorization-secret}}",
                       "type": "string"
                     }
                   ]
@@ -676,6 +942,16 @@
         {
           "name": "Vehiculos",
           "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{vault:authorization-secret}}",
+                  "type": "string"
+                }
+              ]
+            },
             "method": "POST",
             "header": [],
             "url": {
@@ -729,6 +1005,16 @@
         {
           "name": "Multa",
           "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{vault:authorization-secret}}",
+                  "type": "string"
+                }
+              ]
+            },
             "method": "GET",
             "header": [],
             "url": {
