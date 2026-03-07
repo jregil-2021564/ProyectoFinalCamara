@@ -1,10 +1,10 @@
 {
   "info": {
-    "_postman_id": "9505c78b-a6df-4f8e-88d9-e0b8bbed9c1b",
+    "_postman_id": "1a88f187-8991-4284-97e4-51c5b1e2c818",
     "name": "ProyectoFinalCamaras",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "48332491",
-    "_collection_link": "https://go.postman.co/collection/48332491-9505c78b-a6df-4f8e-88d9-e0b8bbed9c1b?source=collection_link"
+    "_collection_link": "https://go.postman.co/collection/48332491-1a88f187-8991-4284-97e4-51c5b1e2c818?source=collection_link"
   },
   "item": [
     {
@@ -154,7 +154,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\r\n  \"emailOrUsername\": \"alejoselv403@gmail.com\",\r\n  \"password\": \"Lolita151223\"\r\n}\r\n",
+              "raw": "{\r\n  \"emailOrUsername\": \"josealejandrovirulaarocha@gmail.com\",\r\n  \"password\": \"Admin1234!\"\r\n}\r\n",
               "options": {
                 "raw": {
                   "language": "json"
@@ -932,6 +932,47 @@
                     "v1",
                     "cuenta",
                     "solicitudes"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Iniciar camara",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3JfVTc2S0ZlaXQzWW52IiwianRpIjoiYmFjYWY4MTYtYzA3Zi00MjBjLTg5NWUtOTA2NGQ4NzY5YzM0IiwiaWF0IjoxNzcyOTEzNjUwLCJyb2xlIjoiQURNSU5fUk9MRSIsImV4cCI6MTc3MzAwMDA1MCwiYXVkIjoiUHJveWVjdG9DYW1hcmEiLCJpc3MiOiJQcm95ZWN0b0NhbWFyYSJ9.PibFE8gXrDD_YEHTMv6USLexG_yUQApAooPCkxGsm7Y",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"placa\": \"P-123ABC\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "http://localhost:3005/api/v1/camara/iniciar",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "3005",
+                  "path": [
+                    "api",
+                    "v1",
+                    "camara",
+                    "iniciar"
                   ]
                 }
               },
