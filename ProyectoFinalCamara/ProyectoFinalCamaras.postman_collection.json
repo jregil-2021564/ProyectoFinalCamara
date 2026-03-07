@@ -20,25 +20,25 @@
               "formdata": [
                 {
                   "key": "name",
-                  "value": "Alejandro",
+                  "value": "Daniel",
                   "type": "text",
                   "uuid": "abd4919a-12c1-42f8-9b5a-58e08777b1e6"
                 },
                 {
                   "key": "surname",
-                  "value": "Arocha",
+                  "value": "Maztur",
                   "type": "text",
                   "uuid": "77403613-e2e1-47a3-8744-71a40b0581f5"
                 },
                 {
                   "key": "username",
-                  "value": "Alejoap365",
+                  "value": "Maquitul",
                   "type": "text",
                   "uuid": "2d80689a-f74c-4508-9e34-5cb449cfe378"
                 },
                 {
                   "key": "email",
-                  "value": "alejandroarochavirula@gmail.com",
+                  "value": "mazturdaniel@gmail.com",
                   "type": "text",
                   "uuid": "9a49a1de-8480-43e7-9d0a-ce07a305e2df"
                 },
@@ -53,6 +53,12 @@
                   "value": "42653798",
                   "type": "text",
                   "uuid": "d979400e-608e-421b-9e77-2418390d384b"
+                },
+                {
+                  "key": "placa",
+                  "value": "P-123ABC",
+                  "type": "text",
+                  "uuid": "d0236ad3-cfef-48ee-8d93-ad6bace3fae2"
                 },
                 {
                   "key": "profilePicture",
@@ -148,7 +154,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\r\n  \"emailOrUsername\": \"alejandroarochavirula@gmail.com\",\r\n  \"password\": \"Lolita151223\"\r\n}\r\n",
+              "raw": "{\r\n  \"emailOrUsername\": \"josealejandrovirulaarocha@gmail.com\",\r\n  \"password\": \"Admin1234!\"\r\n}\r\n",
               "options": {
                 "raw": {
                   "language": "json"
@@ -237,30 +243,20 @@
         {
           "name": "users-list",
           "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3JfQXJRWllZUUNVMWthIiwianRpIjoiYmNhNWVmYTYtOGEwMC00MzE0LTg3MTItYjYyY2ZiMWQ3N2YxIiwiaWF0IjoxNzcyODQ4NjE5LCJyb2xlIjoiQURNSU5fUk9MRSIsImV4cCI6MTc3MjkzNTAxOSwiYXVkIjoiUHJveWVjdG9DYW1hcmEiLCJpc3MiOiJQcm95ZWN0b0NhbWFyYSJ9.3f02Wose2HHe_PNtQBGOjGaDVtrkFwMWEC9bAtByzrU",
+                  "type": "string"
+                }
+              ]
+            },
             "method": "GET",
             "header": [],
             "url": {
-              "raw": ""
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Request Role Change",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\r\n  \"targetUserId\": \"ID_USUARIO\",\r\n  \"newRole\": \"ADMIN_ROLE\"\r\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "http://localhost:3005/api/v1/auth/request-role-change",
+              "raw": "http://localhost:3005/api/v1/admin/roles/users",
               "protocol": "http",
               "host": [
                 "localhost"
@@ -269,21 +265,32 @@
               "path": [
                 "api",
                 "v1",
-                "auth",
-                "request-role-change"
+                "admin",
+                "roles",
+                "users"
               ]
             }
           },
           "response": []
         },
         {
-          "name": "Verify Role Change",
+          "name": "Asignar Rol Admin/User",
           "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3JfQzJjemhUY0NualZDIiwianRpIjoiOWU2NzY4ZTItMjU5NS00YTIyLWI4NzMtMDcyZjlmMzUzNjQ3IiwiaWF0IjoxNzcyODQ2OTE3LCJyb2xlIjoiQURNSU5fUk9MRSIsImV4cCI6MTc3MjkzMzMxNywiYXVkIjoiUHJveWVjdG9DYW1hcmEiLCJpc3MiOiJQcm95ZWN0b0NhbWFyYSJ9.80R88t_GRg0AFZbJjW_sygWHkaPZ73ZNytbgE7dj0jQ",
+                  "type": "string"
+                }
+              ]
+            },
             "method": "POST",
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\r\n  \"token\": \"TOKEN_DE_VERIFICACION\"\r\n}",
+              "raw": "{\r\n  \"userId\": \"usr_jg2mMrnYDmyZ\",\r\n  \"roleName\": \"USER_ROLE\"\r\n}\r\n",
               "options": {
                 "raw": {
                   "language": "json"
@@ -291,7 +298,7 @@
               }
             },
             "url": {
-              "raw": "http://localhost:3005/api/v1/auth/verify-role-change",
+              "raw": "http://localhost:3005/api/v1/admin/roles/assign",
               "protocol": "http",
               "host": [
                 "localhost"
@@ -300,8 +307,51 @@
               "path": [
                 "api",
                 "v1",
-                "auth",
-                "verify-role-change"
+                "admin",
+                "roles",
+                "assign"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Cambiar de rol usuario/admin",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3JfQzJjemhUY0NualZDIiwianRpIjoiZWRlMjVmODEtNWU0Ni00YmI3LWI3MTYtZGI1YjM3ZWJhM2QwIiwiaWF0IjoxNzcyODQ1NDA4LCJyb2xlIjoiQURNSU5fUk9MRSIsImV4cCI6MTc3MjkzMTgwOCwiYXVkIjoiUHJveWVjdG9DYW1hcmEiLCJpc3MiOiJQcm95ZWN0b0NhbWFyYSJ9.CNnEJyOi3Mf-DUlDJpJ9y4RYT3OHGx_MEYLPuVrVml4",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"userId\": \"usr_jg2mMrnYDmyZ\",\r\n  \"roleName\": \"ADMIN_ROLE\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3005/api/v1/admin/roles/remove",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3005",
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "roles",
+                "remove"
               ]
             }
           },
@@ -312,6 +362,317 @@
     {
       "name": "Entidades",
       "item": [
+        {
+          "name": "Menu usuarios",
+          "item": [
+            {
+              "name": "Solicitar Deposito",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{vault:authorization-secret}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"monto\": 2000\r\n}\r\n",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "http://localhost:3005/api/v1/cuenta/solicitar-deposito",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "3005",
+                  "path": [
+                    "api",
+                    "v1",
+                    "cuenta",
+                    "solicitar-deposito"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Ver mi Cuenta",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3JfOWlITmI1Y1BWcHpoIiwianRpIjoiMTI1Y2YwMzgtMzlhNC00NDliLWI2MDAtOTBhZmE5MjE3OTVjIiwiaWF0IjoxNzcyODU0NDk3LCJyb2xlIjoiVVNFUl9ST0xFIiwiZXhwIjoxNzcyOTQwODk3LCJhdWQiOiJQcm95ZWN0b0NhbWFyYSIsImlzcyI6IlByb3llY3RvQ2FtYXJhIn0.Nutx0jFA_Xih3t2WWmZET3un2GiVScKEMi6sLXgbFoE",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "http://localhost:3005/api/v1/cuenta/mi-cuenta",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "3005",
+                  "path": [
+                    "api",
+                    "v1",
+                    "cuenta",
+                    "mi-cuenta"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Confirmacion de Deposito",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{vault:authorization-secret}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"token\": \"bb0f3dc6d9f443ea89b4418343bbc8edda84f6763a62076cb41c54edc2c61620\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "http://localhost:3005/api/v1/cuenta/confirmar-deposito",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "3005",
+                  "path": [
+                    "api",
+                    "v1",
+                    "cuenta",
+                    "confirmar-deposito"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Ver mis Multas",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3JfOWlITmI1Y1BWcHpoIiwianRpIjoiMTI1Y2YwMzgtMzlhNC00NDliLWI2MDAtOTBhZmE5MjE3OTVjIiwiaWF0IjoxNzcyODU0NDk3LCJyb2xlIjoiVVNFUl9ST0xFIiwiZXhwIjoxNzcyOTQwODk3LCJhdWQiOiJQcm95ZWN0b0NhbWFyYSIsImlzcyI6IlByb3llY3RvQ2FtYXJhIn0.Nutx0jFA_Xih3t2WWmZET3un2GiVScKEMi6sLXgbFoE",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "http://localhost:3005/api/v1/pagos/mis-multas",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "3005",
+                  "path": [
+                    "api",
+                    "v1",
+                    "pagos",
+                    "mis-multas"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Pagar Multa",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3JfOWlITmI1Y1BWcHpoIiwianRpIjoiMTI1Y2YwMzgtMzlhNC00NDliLWI2MDAtOTBhZmE5MjE3OTVjIiwiaWF0IjoxNzcyODU0NDk3LCJyb2xlIjoiVVNFUl9ST0xFIiwiZXhwIjoxNzcyOTQwODk3LCJhdWQiOiJQcm95ZWN0b0NhbWFyYSIsImlzcyI6IlByb3llY3RvQ2FtYXJhIn0.Nutx0jFA_Xih3t2WWmZET3un2GiVScKEMi6sLXgbFoE",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"multaId\": \"69a622f859960b2076d5c62f\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "http://localhost:3005/api/v1/pagos/pagar-multa",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "3005",
+                  "path": [
+                    "api",
+                    "v1",
+                    "pagos",
+                    "pagar-multa"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Menu Admin",
+          "item": [
+            {
+              "name": "Aprobar Deposito",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3JfNHQ0UnRpeVFFNURWIiwianRpIjoiYzRkNjEzMWItNDYxNS00MDcwLWFhNTAtMmE1MTEzM2MxNWJjIiwiaWF0IjoxNzcyODU0Njk0LCJyb2xlIjoiQURNSU5fUk9MRSIsImV4cCI6MTc3Mjk0MTA5NCwiYXVkIjoiUHJveWVjdG9DYW1hcmEiLCJpc3MiOiJQcm95ZWN0b0NhbWFyYSJ9.IKMpmEcsrbceZdybGN6ye9O3a412uZpFpAOC93tkwig",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"solicitudId\": \"usr_vMNr4Ew8hzvY\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "http://localhost:3005/api/v1/cuenta/aprobar-deposito",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "3005",
+                  "path": [
+                    "api",
+                    "v1",
+                    "cuenta",
+                    "aprobar-deposito"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Denegar Deposito",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"solicitudId\": \"el id de la solicitud\",\r\n  \"motivo\": \"Documentación insuficiente\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "http://localhost:3005/api/v1/cuenta/rechazar-deposito",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "3005",
+                  "path": [
+                    "api",
+                    "v1",
+                    "cuenta",
+                    "rechazar-deposito"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Ver Solicitudes",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3JfNHQ0UnRpeVFFNURWIiwianRpIjoiYzRkNjEzMWItNDYxNS00MDcwLWFhNTAtMmE1MTEzM2MxNWJjIiwiaWF0IjoxNzcyODU0Njk0LCJyb2xlIjoiQURNSU5fUk9MRSIsImV4cCI6MTc3Mjk0MTA5NCwiYXVkIjoiUHJveWVjdG9DYW1hcmEiLCJpc3MiOiJQcm95ZWN0b0NhbWFyYSJ9.IKMpmEcsrbceZdybGN6ye9O3a412uZpFpAOC93tkwig",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "http://localhost:3005/api/v1/cuenta/solicitudes",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "3005",
+                  "path": [
+                    "api",
+                    "v1",
+                    "cuenta",
+                    "solicitudes"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
         {
           "name": "Vehiculos",
           "request": {
@@ -391,7 +752,10 @@
           "name": "Ver multa por placa",
           "request": {
             "method": "GET",
-            "header": []
+            "header": [],
+            "url": {
+              "raw": ""
+            }
           },
           "response": []
         }
