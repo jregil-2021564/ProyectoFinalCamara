@@ -1,0 +1,22 @@
+'use strict';
+
+import { Router } from 'express';
+import { validateJWT } from '../../middlewares/validate-JWT.js';
+import {
+    registrarInfraccion,
+    obtenerMultas,
+    obtenerMultasPorPlaca,
+    registrarVehiculo,
+} from './trafico.controller.js';
+
+const router = Router();
+
+// Público - llamado desde Python
+router.post('/infracciones', registrarInfraccion);
+
+// Protegidos con JWT
+router.get('/multas', validateJWT, obtenerMultas);
+router.get('/multas/:placa', validateJWT, obtenerMultasPorPlaca);
+router.post('/vehiculos', validateJWT, registrarVehiculo);
+
+export default router;
