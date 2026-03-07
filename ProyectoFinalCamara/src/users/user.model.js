@@ -2,7 +2,6 @@ import { DataTypes } from 'sequelize';
 import { sequelize } from '../../configs/db.js';
 import { generateUserId } from '../../helpers/uuid-generator.js';
 
-// Modelo User (Este modelo es el principal) (equivalente a User.cs en .NET) - usando SNAKE_CASE
 export const User = sequelize.define(
   'User',
   {
@@ -18,10 +17,7 @@ export const User = sequelize.define(
       field: 'name',
       validate: {
         notEmpty: { msg: 'El nombre es obligatorio.' },
-        len: {
-          args: [1, 25],
-          msg: 'El nombre no puede tener más de 25 caracteres.',
-        },
+        len: { args: [1, 25], msg: 'El nombre no puede tener más de 25 caracteres.' },
       },
     },
     Surname: {
@@ -30,10 +26,7 @@ export const User = sequelize.define(
       field: 'surname',
       validate: {
         notEmpty: { msg: 'El apellido es obligatorio.' },
-        len: {
-          args: [1, 25],
-          msg: 'El apellido no puede tener más de 25 caracteres.',
-        },
+        len: { args: [1, 25], msg: 'El apellido no puede tener más de 25 caracteres.' },
       },
     },
     Username: {
@@ -43,10 +36,7 @@ export const User = sequelize.define(
       field: 'username',
       validate: {
         notEmpty: { msg: 'El nombre de usuario es obligatorio.' },
-        len: {
-          args: [1, 50],
-          msg: 'El nombre de usuario no puede tener más de 50 caracteres.',
-        },
+        len: { args: [1, 50], msg: 'El nombre de usuario no puede tener más de 50 caracteres.' },
       },
     },
     Email: {
@@ -57,10 +47,7 @@ export const User = sequelize.define(
       validate: {
         notEmpty: { msg: 'El correo electrónico es obligatorio.' },
         isEmail: { msg: 'El correo electrónico no tiene un formato válido.' },
-        len: {
-          args: [1, 150],
-          msg: 'El correo electrónico no puede tener más de 150 caracteres.',
-        },
+        len: { args: [1, 150], msg: 'El correo electrónico no puede tener más de 150 caracteres.' },
       },
     },
     Password: {
@@ -69,10 +56,7 @@ export const User = sequelize.define(
       field: 'password',
       validate: {
         notEmpty: { msg: 'La contraseña es obligatoria.' },
-        len: {
-          args: [8, 255],
-          msg: 'La contraseña debe tener entre 8 y 255 caracteres.',
-        },
+        len: { args: [8, 255], msg: 'La contraseña debe tener entre 8 y 255 caracteres.' },
       },
     },
     Status: {
@@ -102,7 +86,7 @@ export const User = sequelize.define(
   }
 );
 
-// Modelo UserProfile (equivalente a UserProfile.cs en .NET) - usando snake_case
+// ── UserProfile ───────────────────────────────────────────────────────────────
 export const UserProfile = sequelize.define(
   'UserProfile',
   {
@@ -116,10 +100,7 @@ export const UserProfile = sequelize.define(
       type: DataTypes.STRING(16),
       allowNull: false,
       field: 'user_id',
-      references: {
-        model: User,
-        key: 'id',
-      },
+      references: { model: User, key: 'id' },
     },
     ProfilePicture: {
       type: DataTypes.STRING(512),
@@ -132,11 +113,17 @@ export const UserProfile = sequelize.define(
       field: 'phone',
       validate: {
         notEmpty: { msg: 'El número de teléfono es obligatorio.' },
-        len: {
-          args: [8, 8],
-          msg: 'El número de teléfono debe tener exactamente 8 dígitos.',
-        },
+        len: { args: [8, 8], msg: 'El número de teléfono debe tener exactamente 8 dígitos.' },
         isNumeric: { msg: 'El teléfono solo debe contener números.' },
+      },
+    },
+    // ← Placa al mismo nivel que Phone, NO dentro de él
+    Placa: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+      field: 'placa',
+      set(value) {
+        this.setDataValue('Placa', value ? value.toUpperCase().trim() : null);
       },
     },
   },
@@ -146,7 +133,7 @@ export const UserProfile = sequelize.define(
   }
 );
 
-// Modelo UserEmail (equivalente a UserEmail.cs en .NET) - usando snake_case
+// ── UserEmail ─────────────────────────────────────────────────────────────────
 export const UserEmail = sequelize.define(
   'UserEmail',
   {
@@ -160,10 +147,7 @@ export const UserEmail = sequelize.define(
       type: DataTypes.STRING(16),
       allowNull: false,
       field: 'user_id',
-      references: {
-        model: User,
-        key: 'id',
-      },
+      references: { model: User, key: 'id' },
     },
     EmailVerified: {
       type: DataTypes.BOOLEAN,
@@ -188,7 +172,7 @@ export const UserEmail = sequelize.define(
   }
 );
 
-// Modelo UserPasswordReset (equivalente a UserPasswordReset.cs en .NET) - usando snake_case
+// ── UserPasswordReset ─────────────────────────────────────────────────────────
 export const UserPasswordReset = sequelize.define(
   'UserPasswordReset',
   {
@@ -202,10 +186,7 @@ export const UserPasswordReset = sequelize.define(
       type: DataTypes.STRING(16),
       allowNull: false,
       field: 'user_id',
-      references: {
-        model: User,
-        key: 'id',
-      },
+      references: { model: User, key: 'id' },
     },
     PasswordResetToken: {
       type: DataTypes.STRING(256),
@@ -224,15 +205,12 @@ export const UserPasswordReset = sequelize.define(
   }
 );
 
-// Definir las relaciones (equivalente a las navigation properties en .NET)
-User.hasOne(UserProfile, { foreignKey: 'user_id', as: 'UserProfile' });
-UserProfile.belongsTo(User, { foreignKey: 'user_id', as: 'User' });
+// ── Relaciones ────────────────────────────────────────────────────────────────
+User.hasOne(UserProfile,      { foreignKey: 'user_id', as: 'UserProfile' });
+UserProfile.belongsTo(User,   { foreignKey: 'user_id', as: 'User' });
 
-User.hasOne(UserEmail, { foreignKey: 'user_id', as: 'UserEmail' });
-UserEmail.belongsTo(User, { foreignKey: 'user_id', as: 'User' });
+User.hasOne(UserEmail,        { foreignKey: 'user_id', as: 'UserEmail' });
+UserEmail.belongsTo(User,     { foreignKey: 'user_id', as: 'User' });
 
-User.hasOne(UserPasswordReset, {
-  foreignKey: 'user_id',
-  as: 'UserPasswordReset',
-});
-UserPasswordReset.belongsTo(User, { foreignKey: 'user_id', as: 'User' });
+User.hasOne(UserPasswordReset,       { foreignKey: 'user_id', as: 'UserPasswordReset' });
+UserPasswordReset.belongsTo(User,    { foreignKey: 'user_id', as: 'User' });
