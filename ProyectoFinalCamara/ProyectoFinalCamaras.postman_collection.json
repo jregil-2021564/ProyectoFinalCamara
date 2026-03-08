@@ -1,10 +1,10 @@
 {
   "info": {
-    "_postman_id": "4e3be19e-d4f6-4970-bbae-7a3aeef472a3",
+    "_postman_id": "6818324f-2251-41ca-8a7f-945d08363dcc",
     "name": "ProyectoFinalCamaras",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "48332491",
-    "_collection_link": "https://go.postman.co/collection/48332491-4e3be19e-d4f6-4970-bbae-7a3aeef472a3?source=collection_link"
+    "_collection_link": "https://go.postman.co/collection/48332491-6818324f-2251-41ca-8a7f-945d08363dcc?source=collection_link"
   },
   "item": [
     {
@@ -854,6 +854,38 @@
                     "v1",
                     "pagos",
                     "pagar-multa"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Aumentar multa",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{vault:authorization-secret}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "http://localhost:3005/api/v1/trafico/aumentar-multas",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "3005",
+                  "path": [
+                    "api",
+                    "v1",
+                    "trafico",
+                    "aumentar-multas"
                   ]
                 }
               },
