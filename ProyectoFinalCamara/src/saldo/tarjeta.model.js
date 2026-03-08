@@ -2,9 +2,20 @@
 
 import mongoose from 'mongoose';
 
+/**
+ * Límite de crédito FIJO por marca.
+ * El usuario NO puede editarlo — se asigna automáticamente al crear la tarjeta.
+ */
+export const LIMITE_POR_MARCA = {
+  VISA:       50000,
+  MASTERCARD: 50000,
+  AMEX:       50000,
+  DISCOVER:   50000,
+  OTRA:       50000,
+};
+
 const tarjetaSchema = new mongoose.Schema(
   {
-    // ID del usuario en PostgreSQL — guardado como String exacto
     userId: {
       type:     String,
       required: true,
@@ -45,7 +56,6 @@ const tarjetaSchema = new mongoose.Schema(
       index:    true,
     },
 
-    // "MM/YY"
     fechaVencimiento: {
       type:     String,
       required: true,
@@ -58,12 +68,11 @@ const tarjetaSchema = new mongoose.Schema(
       uppercase: true,
     },
 
-    // Límite máximo que puede recargar con esta tarjeta (acumulado)
+    // Límite FIJO por marca — no editable por el usuario
     limiteCredito: {
-      type:    Number,
-      default: 5000,
-      min:     [100,   'El límite mínimo es Q100'],
-      max:     [50000, 'El límite máximo es Q50,000'],
+      type:     Number,
+      required: true,
+      default:  50000,
     },
 
     // Total acumulado recargado con esta tarjeta
@@ -71,6 +80,26 @@ const tarjetaSchema = new mongoose.Schema(
       type:    Number,
       default: 0,
       min:     0,
+    },
+
+    // ── Verificación de identidad ─────────────────────────────────────────────
+    // La tarjeta NO se puede usar hasta que el usuario confirme el token
+    verificada: {
+      type:    Boolean,
+      default: false,
+      index:   true,
+    },
+
+    // Token de 6 dígitos enviado al correo del usuario
+    tokenVerificacion: {
+      type:    String,
+      default: null,
+    },
+
+    // Expiración del token (10 minutos desde que se envió)
+    tokenVerificacionExpiry: {
+      type:    Date,
+      default: null,
     },
 
     // Soft-delete
