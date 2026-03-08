@@ -1,10 +1,10 @@
 {
   "info": {
-    "_postman_id": "1a88f187-8991-4284-97e4-51c5b1e2c818",
+    "_postman_id": "4e3be19e-d4f6-4970-bbae-7a3aeef472a3",
     "name": "ProyectoFinalCamaras",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "48332491",
-    "_collection_link": "https://go.postman.co/collection/48332491-1a88f187-8991-4284-97e4-51c5b1e2c818?source=collection_link"
+    "_collection_link": "https://go.postman.co/collection/48332491-4e3be19e-d4f6-4970-bbae-7a3aeef472a3?source=collection_link"
   },
   "item": [
     {
@@ -38,7 +38,7 @@
                 },
                 {
                   "key": "email",
-                  "value": "alejoselv403@gmail.com",
+                  "value": "jregil0re@gmail.com",
                   "type": "text",
                   "uuid": "9a49a1de-8480-43e7-9d0a-ce07a305e2df"
                 },
@@ -154,7 +154,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\r\n  \"emailOrUsername\": \"josealejandrovirulaarocha@gmail.com\",\r\n  \"password\": \"Admin1234!\"\r\n}\r\n",
+              "raw": "{\r\n  \"emailOrUsername\": \"jregil0re@gmail.com\",\r\n  \"password\": \"Lolita151223\"\r\n}\r\n",
               "options": {
                 "raw": {
                   "language": "json"
@@ -385,7 +385,7 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\r\n  \"numeroTarjeta\":    \"6011 1111 1111 1117\",\r\n  \"fechaVencimiento\": \"12/29\",\r\n  \"cvv\":              \"123\",\r\n  \"nombreTitular\":    \"Juan Pérez\",\r\n  \"tipoTarjeta\":      \"CREDITO\",\r\n  \"limiteCredito\":    5000,\r\n  \"alias\":            \"Mi Visa personal\"\r\n}",
+                      "raw": "{\r\n  \"numeroTarjeta\":    \"5500 0000 0000 0004\",\r\n  \"fechaVencimiento\": \"12/29\",\r\n  \"cvv\":              \"123\",\r\n  \"nombreTitular\":    \"joab regil\",\r\n  \"tipoTarjeta\":      \"CREDITO\",\r\n  \"alias\":            \"Mi Visa\"\r\n}",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -478,7 +478,7 @@
                       }
                     },
                     "url": {
-                      "raw": "http://localhost:3005/api/v1/saldo/mis-tarjetas/69ac6af4cc768fb35e57dd22",
+                      "raw": "http://localhost:3005/api/v1/saldo/mis-tarjetas/69adbc3737825ef1391f949f",
                       "protocol": "http",
                       "host": [
                         "localhost"
@@ -489,7 +489,48 @@
                         "v1",
                         "saldo",
                         "mis-tarjetas",
-                        "69ac6af4cc768fb35e57dd22"
+                        "69adbc3737825ef1391f949f"
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Verificar Tarjeta",
+                  "request": {
+                    "auth": {
+                      "type": "bearer",
+                      "bearer": [
+                        {
+                          "key": "token",
+                          "value": "{{vault:authorization-secret}}",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "method": "POST",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\r\n  \"token\": \"701114\"\r\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "http://localhost:3005/api/v1/saldo/verificar-tarjeta",
+                      "protocol": "http",
+                      "host": [
+                        "localhost"
+                      ],
+                      "port": "3005",
+                      "path": [
+                        "api",
+                        "v1",
+                        "saldo",
+                        "verificar-tarjeta"
                       ]
                     }
                   },
@@ -517,7 +558,7 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\r\n  \"tarjetaId\": \"69ac7386c06b2d9a51b134ac\",\r\n   \"monto\":     4000.00\r\n}",
+                      "raw": "{\r\n  \"tarjetaId\": \"69adbeb837825ef1391f94bd\",\r\n   \"monto\":     2000.00\r\n}",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -561,7 +602,7 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\r\n  \"tarjetaId\": \"69ac67e8b4dc048225abec80\",\r\n  \"monto\":     250.00\r\n}",
+                      "raw": "",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -605,7 +646,7 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\r\n  \"tarjetaId\": \"69ac67e8b4dc048225abec80\",\r\n  \"monto\":     250.00\r\n}",
+                      "raw": "",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -794,7 +835,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\r\n  \"multaId\": \"69ac7656c06b2d9a51b134b6\"\r\n}",
+                  "raw": "{\r\n  \"multaId\":   \"69adc2bf37825ef1391f9506\",\r\n  \"tarjetaId\": \"69adc22637825ef1391f9500\"\r\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -945,7 +986,7 @@
                   "bearer": [
                     {
                       "key": "token",
-                      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3JfVTc2S0ZlaXQzWW52IiwianRpIjoiYmFjYWY4MTYtYzA3Zi00MjBjLTg5NWUtOTA2NGQ4NzY5YzM0IiwiaWF0IjoxNzcyOTEzNjUwLCJyb2xlIjoiQURNSU5fUk9MRSIsImV4cCI6MTc3MzAwMDA1MCwiYXVkIjoiUHJveWVjdG9DYW1hcmEiLCJpc3MiOiJQcm95ZWN0b0NhbWFyYSJ9.PibFE8gXrDD_YEHTMv6USLexG_yUQApAooPCkxGsm7Y",
+                      "value": "{{vault:authorization-secret}}",
                       "type": "string"
                     }
                   ]
@@ -954,7 +995,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\r\n  \"placa\": \"P-123ABC\"\r\n}",
+                  "raw": "",
                   "options": {
                     "raw": {
                       "language": "json"
