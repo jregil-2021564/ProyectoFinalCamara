@@ -204,7 +204,7 @@ export const validarSaldo = async (req, res) => {
 export const aumentarMultas = async (req, res) => {
     try {
         const haceCincoDias = new Date();
-        haceCincoDias.setDate(haceCincoDias.getDate() - 5);
+        haceCincoDias.setMinutes(haceCincoDias.getMinutes() - 10);
 
         const multasPendientes = await Multa.find({
             estado: 'PENDIENTE',
