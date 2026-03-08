@@ -1,16 +1,17 @@
 'use strict';
 
-import crypto              from 'crypto';
-import mongoose            from 'mongoose';
-import { v4 as uuidv4 }   from 'uuid';
+import crypto             from 'crypto';
+import mongoose           from 'mongoose';
+import { v4 as uuidv4 }  from 'uuid';
 
-import { Tarjeta }  from './tarjeta.model.js';           // MongoDB
-import { Recarga }  from './recarga.model.js';           // MongoDB
-import { Cuenta }   from '../cuenta/cuenta.model.js';   // PostgreSQL
-import { findUserById } from '../../helpers/user-db.js'; // para obtener email/nombre
+import { Tarjeta, LIMITE_POR_MARCA } from './tarjeta.model.js';
+import { Recarga }                   from './recarga.model.js';
+import { Cuenta }                    from '../cuenta/cuenta.model.js';
+import { findUserById }              from '../../helpers/user-db.js';
 import {
-  sendAlertaRecarga,
+  sendVerificacionTarjeta,
   sendAlertaTarjetaAgregada,
+  sendAlertaRecarga,
 } from '../../helpers/email-saldo.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -46,11 +47,15 @@ const hashNumero = (numero) =>
 
 const esObjectIdValido = (id) => mongoose.Types.ObjectId.isValid(id);
 
-// Obtiene el userId como string limpio — maneja Id / id indistintamente
 const getUserId = (req) => String(req.user?.Id ?? req.user?.id ?? '').trim();
+
+// Genera token numérico de 6 dígitos
+const generarToken6 = () =>
+  String(Math.floor(100000 + Math.random() * 900000));
 
 const MONTO_MIN =   10;
 const MONTO_MAX = 5000;
+const TOKEN_EXPIRY_MINUTES = 10;
 
 const formatTarjeta = (t) => ({
   id:              t._id,
@@ -63,18 +68,286 @@ const formatTarjeta = (t) => ({
   limiteCredito:   `Q${t.limiteCredito.toFixed(2)}`,
   totalRecargado:  `Q${t.totalRecargado.toFixed(2)}`,
   saldoDisponible: `Q${Math.max(0, t.limiteCredito - t.totalRecargado).toFixed(2)}`,
+  verificada:      t.verificada,
   agregadaEl:      t.createdAt,
 });
 
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/v1/saldo/agregar-tarjeta
+// PASO 1 — Valida la tarjeta y envía código al correo del usuario
+// La tarjeta queda guardada pero NO verificada hasta que confirme el token
+// ─────────────────────────────────────────────────────────────────────────────
+export const agregarTarjeta = async (req, res) => {
+  try {
+    const userId = getUserId(req);
+
+    const {
+      numeroTarjeta,
+      fechaVencimiento,
+      cvv,
+      nombreTitular,
+      tipoTarjeta = 'CREDITO',
+      alias       = null,
+    } = req.body;
+
+    // 1. Campos obligatorios
+    if (!numeroTarjeta || !fechaVencimiento || !cvv || !nombreTitular) {
+      return res.status(400).json({
+        success: false,
+        message: 'Campos requeridos: numeroTarjeta, fechaVencimiento, cvv, nombreTitular',
+      });
+    }
+
+    // 2. Número de tarjeta — longitud y Luhn
+    const numeroLimpio = numeroTarjeta.replace(/\D/g, '');
+    if (numeroLimpio.length < 13 || numeroLimpio.length > 19) {
+      return res.status(400).json({
+        success: false,
+        message: 'Número de tarjeta inválido (debe tener entre 13 y 19 dígitos)',
+      });
+    }
+    if (!luhn(numeroLimpio)) {
+      return res.status(400).json({
+        success: false,
+        message: 'El número de tarjeta no es válido',
+      });
+    }
+
+    // 3. Fecha de vencimiento
+    if (!fechaVigente(fechaVencimiento)) {
+      return res.status(400).json({
+        success: false,
+        message: 'La tarjeta está vencida o la fecha tiene formato incorrecto (MM/YY)',
+      });
+    }
+
+    // 4. CVV — 3 dígitos para todas, 4 para AMEX
+    const marca       = detectarMarca(numeroLimpio);
+    const cvvValido   = marca === 'AMEX' ? /^\d{4}$/.test(cvv) : /^\d{3}$/.test(cvv);
+    if (!cvvValido) {
+      return res.status(400).json({
+        success: false,
+        message: marca === 'AMEX'
+          ? 'Las tarjetas AMEX requieren CVV de 4 dígitos'
+          : 'El CVV debe tener 3 dígitos',
+      });
+    }
+
+    // 5. Tipo de tarjeta
+    if (!['CREDITO', 'DEBITO'].includes(tipoTarjeta.toUpperCase())) {
+      return res.status(400).json({
+        success: false,
+        message: 'tipoTarjeta debe ser CREDITO o DEBITO',
+      });
+    }
+
+    // 6. Nombre del titular — no vacío, solo letras y espacios
+    const nombreLimpio = nombreTitular.trim().toUpperCase();
+    if (nombreLimpio.length < 3 || !/^[A-ZÁÉÍÓÚÑÜ\s]+$/i.test(nombreLimpio)) {
+      return res.status(400).json({
+        success: false,
+        message: 'El nombre del titular es inválido (solo letras y espacios)',
+      });
+    }
+
+    // 7. Límite fijo por marca — el usuario NO lo elige
+    const limiteCredito = LIMITE_POR_MARCA[marca] ?? 50000;
+
+    // 8. ¿Ya existe esta tarjeta?
+    const tokenNum  = hashNumero(numeroLimpio);
+    const existente = await Tarjeta.findOne({ tokenNumero: tokenNum });
+
+    if (existente) {
+      if (existente.userId === userId) {
+        if (existente.activa && existente.verificada) {
+          return res.status(409).json({
+            success: false,
+            message: `Ya tienes esta tarjeta registrada y verificada (**** ${existente.ultimosDigitos})`,
+          });
+        }
+        if (existente.activa && !existente.verificada) {
+          // Reenviar token de verificación
+          const nuevoToken  = generarToken6();
+          const expiry      = new Date(Date.now() + TOKEN_EXPIRY_MINUTES * 60 * 1000);
+          existente.tokenVerificacion       = nuevoToken;
+          existente.tokenVerificacionExpiry = expiry;
+          await existente.save();
+
+          const user = await findUserById(userId);
+          if (user) {
+            await sendVerificacionTarjeta({
+              email:          user.Email,
+              nombre:         `${user.Name} ${user.Surname}`,
+              marca:          existente.marca,
+              ultimosDigitos: existente.ultimosDigitos,
+              token:          nuevoToken,
+            });
+          }
+
+          return res.status(200).json({
+            success: true,
+            message: `Esta tarjeta ya está pendiente de verificación. Se reenvió el código a tu correo.`,
+            tarjetaId: existente._id,
+            siguientePaso: 'POST /api/v1/saldo/verificar-tarjeta con el código recibido',
+          });
+        }
+      }
+      if (existente.userId !== userId) {
+        return res.status(403).json({
+          success: false,
+          message: 'Esta tarjeta ya está asociada a otra cuenta',
+        });
+      }
+    }
+
+    // 9. Obtener datos del usuario para enviar el correo
+    const user = await findUserById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+    }
+
+    // 10. Generar token de verificación de 6 dígitos
+    const tokenVerif = generarToken6();
+    const expiry     = new Date(Date.now() + TOKEN_EXPIRY_MINUTES * 60 * 1000);
+
+    // 11. Guardar tarjeta como NO verificada
+    const nuevaTarjeta = await Tarjeta.create({
+      userId,
+      alias,
+      ultimosDigitos:          numeroLimpio.slice(-4),
+      marca,
+      tipoTarjeta:             tipoTarjeta.toUpperCase(),
+      tokenNumero:             tokenNum,
+      fechaVencimiento,
+      nombreTitular:           nombreLimpio,
+      limiteCredito,           // fijo por marca, el usuario no lo eligió
+      totalRecargado:          0,
+      verificada:              false,
+      tokenVerificacion:       tokenVerif,
+      tokenVerificacionExpiry: expiry,
+      activa:                  true,
+    });
+
+    // 12. Enviar código al correo del usuario
+    await sendVerificacionTarjeta({
+      email:          user.Email,
+      nombre:         `${user.Name} ${user.Surname}`,
+      marca,
+      ultimosDigitos: nuevaTarjeta.ultimosDigitos,
+      token:          tokenVerif,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: `Se envió un código de verificación a ${user.Email}. Tienes ${TOKEN_EXPIRY_MINUTES} minutos para confirmarlo.`,
+      tarjetaId:     nuevaTarjeta._id,
+      marca,
+      ultimosDigitos: nuevaTarjeta.ultimosDigitos,
+      limiteCredito: `Q${limiteCredito.toFixed(2)}`,
+      siguientePaso: 'POST /api/v1/saldo/verificar-tarjeta con el código recibido en tu correo',
+    });
+
+  } catch (error) {
+    console.error('Error en agregarTarjeta:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/v1/saldo/verificar-tarjeta
+// PASO 2 — El usuario pone el token de 6 dígitos recibido en su correo
+// ─────────────────────────────────────────────────────────────────────────────
+export const verificarTarjeta = async (req, res) => {
+  try {
+    const userId        = getUserId(req);
+    const { token }     = req.body;
+
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        message: 'El token de verificación es requerido',
+      });
+    }
+
+    // Validar formato: exactamente 6 dígitos
+    if (!/^\d{6}$/.test(String(token))) {
+      return res.status(400).json({
+        success: false,
+        message: 'El token debe ser un código de 6 dígitos',
+      });
+    }
+
+    // Buscar tarjeta pendiente de verificación de este usuario
+    const tarjeta = await Tarjeta.findOne({
+      userId,
+      verificada:        false,
+      activa:            true,
+      tokenVerificacion: String(token),
+    });
+
+    if (!tarjeta) {
+      return res.status(400).json({
+        success: false,
+        message: 'Código incorrecto o no tienes ninguna tarjeta pendiente de verificación',
+      });
+    }
+
+    // Verificar que el token no haya expirado
+    if (!tarjeta.tokenVerificacionExpiry || tarjeta.tokenVerificacionExpiry < new Date()) {
+      return res.status(400).json({
+        success: false,
+        message: 'El código expiró. Agrega la tarjeta nuevamente para recibir un nuevo código.',
+      });
+    }
+
+    // Activar la tarjeta
+    tarjeta.verificada              = true;
+    tarjeta.tokenVerificacion       = null;
+    tarjeta.tokenVerificacionExpiry = null;
+    await tarjeta.save();
+
+    // Correo de confirmación
+    setImmediate(async () => {
+      try {
+        const user = await findUserById(userId);
+        if (user) {
+          await sendAlertaTarjetaAgregada({
+            email:          user.Email,
+            nombre:         `${user.Name} ${user.Surname}`,
+            marca:          tarjeta.marca,
+            ultimosDigitos: tarjeta.ultimosDigitos,
+            tipoTarjeta:    tarjeta.tipoTarjeta,
+            limiteCredito:  tarjeta.limiteCredito,
+            fecha:          new Date().toLocaleString('es-GT'),
+          });
+        }
+      } catch (e) {
+        console.error('Error enviando correo confirmación tarjeta:', e.message);
+      }
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `Tarjeta ${tarjeta.marca} **** ${tarjeta.ultimosDigitos} verificada y activada correctamente`,
+      tarjeta: formatTarjeta(tarjeta),
+    });
+
+  } catch (error) {
+    console.error('Error en verificarTarjeta:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/v1/saldo/mi-saldo
-// Solo muestra el saldo y recargas del usuario autenticado
 // ─────────────────────────────────────────────────────────────────────────────
 export const miSaldo = async (req, res) => {
   try {
     const userId = getUserId(req);
 
-    // Cuenta en PostgreSQL
     const cuenta = await Cuenta.findOne({ where: { UserId: userId } });
     if (!cuenta) {
       return res.status(404).json({
@@ -85,22 +358,20 @@ export const miSaldo = async (req, res) => {
 
     const saldo = parseFloat(cuenta.Saldo);
 
-    // Últimas 5 recargas SOLO de este usuario (MongoDB filtra por userId)
     const ultimasRecargas = await Recarga.find({ userId, estado: 'APROBADA' })
       .populate('tarjetaId', 'ultimosDigitos marca')
       .sort({ createdAt: -1 })
       .limit(5);
 
-    // Total histórico recargado por este usuario
     const agregacion     = await Recarga.aggregate([
       { $match: { userId, estado: 'APROBADA' } },
       { $group: { _id: null, total: { $sum: '$monto' } } },
     ]);
     const totalRecargado = agregacion[0]?.total ?? 0;
 
-    // Tarjetas activas con su saldo disponible
-    const tarjetas = await Tarjeta.find({ userId, activa: true })
-      .select('-tokenNumero -__v')
+    // Solo tarjetas VERIFICADAS
+    const tarjetas = await Tarjeta.find({ userId, activa: true, verificada: true })
+      .select('-tokenNumero -tokenVerificacion -tokenVerificacionExpiry -__v')
       .sort({ createdAt: -1 });
 
     return res.status(200).json({
@@ -138,196 +409,16 @@ export const miSaldo = async (req, res) => {
   }
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// POST /api/v1/saldo/agregar-tarjeta
-// ─────────────────────────────────────────────────────────────────────────────
-/**
- * El userId viene del JWT — no se pide en el body.
- * Body: {
- *   numeroTarjeta, fechaVencimiento, cvv, nombreTitular,
- *   tipoTarjeta?   ("CREDITO" | "DEBITO"),
- *   limiteCredito? (Q100 – Q50,000, default Q5,000),
- *   alias?
- * }
- */
-export const agregarTarjeta = async (req, res) => {
-  try {
-    const userId = getUserId(req);
-
-    const {
-      numeroTarjeta,
-      fechaVencimiento,
-      cvv,
-      nombreTitular,
-      tipoTarjeta   = 'CREDITO',
-      limiteCredito = 5000,
-      alias         = null,
-    } = req.body;
-
-    // 1. Campos obligatorios
-    if (!numeroTarjeta || !fechaVencimiento || !cvv || !nombreTitular) {
-      return res.status(400).json({
-        success: false,
-        message: 'Campos requeridos: numeroTarjeta, fechaVencimiento, cvv, nombreTitular',
-      });
-    }
-
-    // 2. Número + Luhn
-    const numeroLimpio = numeroTarjeta.replace(/\D/g, '');
-    if (numeroLimpio.length < 13 || numeroLimpio.length > 19) {
-      return res.status(400).json({ success: false, message: 'Número de tarjeta inválido' });
-    }
-    if (!luhn(numeroLimpio)) {
-      return res.status(400).json({ success: false, message: 'El número de tarjeta no es válido' });
-    }
-
-    // 3. Fecha
-    if (!fechaVigente(fechaVencimiento)) {
-      return res.status(400).json({
-        success: false,
-        message: 'La tarjeta está vencida o la fecha tiene formato incorrecto (MM/YY)',
-      });
-    }
-
-    // 4. CVV
-    const marca       = detectarMarca(numeroLimpio);
-    const cvvEsValido = marca === 'AMEX' ? /^\d{4}$/.test(cvv) : /^\d{3}$/.test(cvv);
-    if (!cvvEsValido) {
-      return res.status(400).json({
-        success: false,
-        message: marca === 'AMEX'
-          ? 'Las tarjetas AMEX requieren CVV de 4 dígitos'
-          : 'El CVV debe tener 3 dígitos',
-      });
-    }
-
-    // 5. Tipo tarjeta
-    if (!['CREDITO', 'DEBITO'].includes(tipoTarjeta.toUpperCase())) {
-      return res.status(400).json({ success: false, message: 'tipoTarjeta debe ser CREDITO o DEBITO' });
-    }
-
-    // 6. Límite de crédito
-    const limiteNum = parseFloat(limiteCredito);
-    if (isNaN(limiteNum) || limiteNum < 100 || limiteNum > 50000) {
-      return res.status(400).json({
-        success: false,
-        message: 'limiteCredito debe estar entre Q100 y Q50,000',
-      });
-    }
-
-    // 7. ¿Ya existe esta tarjeta?
-    const token     = hashNumero(numeroLimpio);
-    const existente = await Tarjeta.findOne({ tokenNumero: token });
-
-    if (existente) {
-      if (existente.userId === userId && existente.activa) {
-        return res.status(409).json({
-          success: false,
-          message: `Ya tienes esta tarjeta registrada (**** ${existente.ultimosDigitos})`,
-        });
-      }
-      if (existente.userId !== userId) {
-        return res.status(403).json({
-          success: false,
-          message: 'Esta tarjeta ya está asociada a otra cuenta',
-        });
-      }
-      // Reactivar tarjeta inactiva del mismo usuario
-      existente.alias            = alias;
-      existente.fechaVencimiento = fechaVencimiento;
-      existente.nombreTitular    = nombreTitular.trim().toUpperCase();
-      existente.tipoTarjeta      = tipoTarjeta.toUpperCase();
-      existente.limiteCredito    = limiteNum;
-      existente.activa           = true;
-      await existente.save();
-
-      // Correo de alerta — no bloquear la respuesta si falla
-      setImmediate(async () => {
-        try {
-          const user = await findUserById(userId);
-          if (user) {
-            await sendAlertaTarjetaAgregada({
-              email:          user.Email,
-              nombre:         `${user.Name} ${user.Surname}`,
-              marca:          existente.marca,
-              ultimosDigitos: existente.ultimosDigitos,
-              tipoTarjeta:    existente.tipoTarjeta,
-              limiteCredito:  existente.limiteCredito,
-              fecha:          new Date().toLocaleString('es-GT'),
-            });
-          }
-        } catch (e) {
-          console.error('Error enviando correo tarjeta reactivada:', e.message);
-        }
-      });
-
-      return res.status(200).json({
-        success: true,
-        message: `Tarjeta ${marca} **** ${existente.ultimosDigitos} reactivada`,
-        tarjeta: formatTarjeta(existente),
-      });
-    }
-
-    // 8. Crear nueva tarjeta
-    const nueva = await Tarjeta.create({
-      userId,
-      alias,
-      ultimosDigitos:   numeroLimpio.slice(-4),
-      marca,
-      tipoTarjeta:      tipoTarjeta.toUpperCase(),
-      tokenNumero:      token,
-      fechaVencimiento,
-      nombreTitular:    nombreTitular.trim().toUpperCase(),
-      limiteCredito:    limiteNum,
-      totalRecargado:   0,
-      activa:           true,
-    });
-
-    // Correo de alerta — no bloquear la respuesta
-    setImmediate(async () => {
-      try {
-        const user = await findUserById(userId);
-        if (user) {
-          await sendAlertaTarjetaAgregada({
-            email:          user.Email,
-            nombre:         `${user.Name} ${user.Surname}`,
-            marca:          nueva.marca,
-            ultimosDigitos: nueva.ultimosDigitos,
-            tipoTarjeta:    nueva.tipoTarjeta,
-            limiteCredito:  nueva.limiteCredito,
-            fecha:          new Date().toLocaleString('es-GT'),
-          });
-        }
-      } catch (e) {
-        console.error('Error enviando correo nueva tarjeta:', e.message);
-      }
-    });
-
-    return res.status(201).json({
-      success: true,
-      message: `Tarjeta ${marca} **** ${nueva.ultimosDigitos} agregada correctamente`,
-      tarjeta: formatTarjeta(nueva),
-    });
-
-  } catch (error) {
-    console.error('Error en agregarTarjeta:', error);
-    return res.status(500).json({ success: false, error: error.message });
-  }
-};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/v1/saldo/recargar
+// Solo permite recargar con tarjetas VERIFICADAS
 // ─────────────────────────────────────────────────────────────────────────────
-/**
- * Body: { tarjetaId, monto }
- * tarjetaId = _id de MongoDB (24 chars hex) que devuelve /agregar-tarjeta
- */
 export const recargarSaldo = async (req, res) => {
   try {
     const userId               = getUserId(req);
     const { tarjetaId, monto } = req.body;
 
-    // 1. Campos
     if (!tarjetaId || monto === undefined) {
       return res.status(400).json({
         success: false,
@@ -335,7 +426,6 @@ export const recargarSaldo = async (req, res) => {
       });
     }
 
-    // 2. Validar que sea ObjectId válido
     if (!esObjectIdValido(tarjetaId)) {
       return res.status(400).json({
         success: false,
@@ -343,7 +433,6 @@ export const recargarSaldo = async (req, res) => {
       });
     }
 
-    // 3. Monto
     const montoNum = parseFloat(monto);
     if (isNaN(montoNum) || montoNum < MONTO_MIN) {
       return res.status(400).json({
@@ -358,13 +447,11 @@ export const recargarSaldo = async (req, res) => {
       });
     }
 
-    // 4. Buscar tarjeta solo por _id
     const tarjeta = await Tarjeta.findById(tarjetaId);
     if (!tarjeta) {
       return res.status(404).json({ success: false, message: 'Tarjeta no encontrada' });
     }
 
-    // 5. Verificar que pertenece a ESTE usuario
     if (String(tarjeta.userId).trim() !== userId) {
       return res.status(403).json({
         success: false,
@@ -372,10 +459,19 @@ export const recargarSaldo = async (req, res) => {
       });
     }
 
-    // 6. Activa y vigente
     if (!tarjeta.activa) {
       return res.status(400).json({ success: false, message: 'Esta tarjeta está desactivada' });
     }
+
+    // Bloquear si no está verificada
+    if (!tarjeta.verificada) {
+      return res.status(403).json({
+        success: false,
+        message: 'Esta tarjeta no está verificada. Completa la verificación primero.',
+        siguientePaso: 'POST /api/v1/saldo/verificar-tarjeta con el código enviado a tu correo',
+      });
+    }
+
     if (!fechaVigente(tarjeta.fechaVencimiento)) {
       return res.status(400).json({
         success: false,
@@ -383,12 +479,11 @@ export const recargarSaldo = async (req, res) => {
       });
     }
 
-    // 7. Verificar límite disponible en la tarjeta
     const disponible = tarjeta.limiteCredito - tarjeta.totalRecargado;
     if (montoNum > disponible) {
       return res.status(400).json({
         success: false,
-        message: `Fondos insuficientes en la tarjeta`,
+        message: 'Fondos insuficientes en la tarjeta',
         limiteCredito:   `Q${tarjeta.limiteCredito.toFixed(2)}`,
         totalRecargado:  `Q${tarjeta.totalRecargado.toFixed(2)}`,
         disponible:      `Q${disponible.toFixed(2)}`,
@@ -396,7 +491,6 @@ export const recargarSaldo = async (req, res) => {
       });
     }
 
-    // 8. Cuenta en PostgreSQL
     const cuenta = await Cuenta.findOne({ where: { UserId: userId } });
     if (!cuenta) {
       return res.status(404).json({
@@ -405,16 +499,13 @@ export const recargarSaldo = async (req, res) => {
       });
     }
 
-    // 9. Acreditar saldo
     const saldoAnterior = parseFloat(cuenta.Saldo);
     const saldoNuevo    = saldoAnterior + montoNum;
     await cuenta.update({ Saldo: saldoNuevo });
 
-    // 10. Actualizar totalRecargado en la tarjeta
     tarjeta.totalRecargado += montoNum;
     await tarjeta.save();
 
-    // 11. Registrar transacción
     const referencia = uuidv4();
     const recarga    = await Recarga.create({
       userId,
@@ -427,7 +518,6 @@ export const recargarSaldo = async (req, res) => {
       descripcion:   `Recarga con ${tarjeta.marca} **** ${tarjeta.ultimosDigitos}`,
     });
 
-    // 12. Correo de alerta — sin bloquear respuesta
     setImmediate(async () => {
       try {
         const user = await findUserById(userId);
@@ -471,14 +561,16 @@ export const recargarSaldo = async (req, res) => {
   }
 };
 
+
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/v1/saldo/mis-tarjetas
+// Solo muestra tarjetas verificadas
 // ─────────────────────────────────────────────────────────────────────────────
 export const misTarjetas = async (req, res) => {
   try {
     const userId   = getUserId(req);
-    const tarjetas = await Tarjeta.find({ userId, activa: true })
-      .select('-tokenNumero -__v')
+    const tarjetas = await Tarjeta.find({ userId, activa: true, verificada: true })
+      .select('-tokenNumero -tokenVerificacion -tokenVerificacionExpiry -__v')
       .sort({ createdAt: -1 });
 
     return res.status(200).json({
@@ -491,6 +583,7 @@ export const misTarjetas = async (req, res) => {
     return res.status(500).json({ success: false, error: error.message });
   }
 };
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DELETE /api/v1/saldo/mis-tarjetas/:id
@@ -520,6 +613,7 @@ export const eliminarTarjeta = async (req, res) => {
     return res.status(500).json({ success: false, error: error.message });
   }
 };
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/v1/saldo/historial
