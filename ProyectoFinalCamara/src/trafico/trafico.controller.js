@@ -298,3 +298,63 @@ export const pagarMulta = async (req, res) => {
         return res.status(500).json({ success: false, error: err.message });
     }
 };
+
+// PUT /api/v1/trafico/multas/:multaId  ← solo ADMIN_ROLE
+export const actualizarDatosMulta = async (req, res) => {
+    try {
+        const userId = String(req.user?.Id ?? req.user?.id ?? '').trim();
+
+        const roles = req.user?.UserRoles?.map(ur => ur.Role?.Name).filter(Boolean)
+            ?? await getUserRoleNames(userId);
+
+        if (!roles.includes('ADMIN_ROLE')) {
+            return res.status(403).json({
+                success: false,
+                message: 'Acceso denegado. Solo administradores pueden editar multas.',
+            });
+        }
+
+        const { multaId } = req.params;
+        const { placa, modelo, color, anio } = req.body;
+
+        const multa = await Multa.findById(multaId);
+        if (!multa) {
+            return res.status(404).json({ success: false, message: 'Multa no encontrada' });
+        }
+
+        if (placa)  multa.placa            = placa.toUpperCase();
+        if (modelo) multa.modelo_detectado = modelo;
+        if (color)  multa.color_detectado  = color;
+        if (anio)   multa.anio_detectado   = String(anio);
+
+        if (placa) {
+            const placaLimpia = placa.toUpperCase();
+            const vehiculo = await Vehiculo.findOne({ where: { placa: placaLimpia } });
+            if (!vehiculo && modelo && color && anio) {
+                await Vehiculo.create({
+                    placa:  placaLimpia,
+                    modelo: modelo,
+                    color:  color,
+                    anio:   anio,
+                });
+            }
+        }
+
+        await multa.save();
+
+        return res.status(200).json({
+            success: true,
+            message: 'Datos de multa actualizados correctamente',
+            multa: {
+                id:     multa._id,
+                placa:  multa.placa,
+                modelo: multa.modelo_detectado,
+                color:  multa.color_detectado,
+                anio:   multa.anio_detectado,
+                estado: multa.estado,
+            },
+        });
+    } catch (err) {
+        return res.status(500).json({ success: false, error: err.message });
+    }
+};

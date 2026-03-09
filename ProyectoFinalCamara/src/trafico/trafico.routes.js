@@ -11,6 +11,7 @@ import {
     validarSaldo,
     aumentarMultas,
     pagarMulta,
+    actualizarDatosMulta,
 } from './trafico.controller.js';
 
 const router = Router();
@@ -28,5 +29,8 @@ router.get('/buscar/:placa', validateJWT, verMultasPorPlaca);
 router.get('/validar-saldo/:multaId', validateJWT, validarSaldo);
 router.put('/aumentar-multas', validateJWT, aumentarMultas);
 router.post('/pagar/:multaId', validateJWT, pagarMulta);
+
+// Solo ADMIN_ROLE - actualizar datos de multa
+router.put('/multas/:multaId', validateJWT, actualizarDatosMulta);
 
 export default router;
