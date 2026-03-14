@@ -8,8 +8,8 @@ export const registrarInfraccion = async (req, res) => {
     try {
         const {
             placa,
-            velocidad  = 0,
-            paso_rojo  = false,
+            velocidad = 0,
+            paso_rojo = false,
             modelo_ia,
             color_ia,
             anio_ia,
@@ -25,10 +25,10 @@ export const registrarInfraccion = async (req, res) => {
         if (!vehiculo && modelo_ia && color_ia && anio_ia) {
             try {
                 vehiculoFinal = await Vehiculo.create({
-                    placa:  placa.toUpperCase(),
+                    placa: placa.toUpperCase(),
                     modelo: modelo_ia,
-                    color:  color_ia,
-                    anio:   anio_ia,
+                    color: color_ia,
+                    anio: anio_ia,
                 });
                 console.log(`🚗 Vehículo registrado automáticamente por IA: ${placa.toUpperCase()}`);
             } catch (e) {
@@ -38,7 +38,7 @@ export const registrarInfraccion = async (req, res) => {
 
         let monto = 0;
         const tipo = [];
-        if (paso_rojo)      { monto += 1500; tipo.push('Semáforo en rojo'); }
+        if (paso_rojo) { monto += 1500; tipo.push('Semáforo en rojo'); }
         if (velocidad > 60) { monto += (velocidad - 60) * 20; tipo.push(`Exceso de velocidad ${velocidad} km/h`); }
 
         if (tipo.length === 0) {
@@ -48,29 +48,29 @@ export const registrarInfraccion = async (req, res) => {
         const fuenteDatos = vehiculo ? 'Base de datos' : 'Detectado por IA';
 
         const multa = await Multa.create({
-            placa:            placa.toUpperCase(),
+            placa: placa.toUpperCase(),
             velocidad,
             paso_rojo,
-            tipo_infraccion:  tipo.join(' + '),
-            monto_multa:      monto,
+            tipo_infraccion: tipo.join(' + '),
+            monto_multa: monto,
             modelo_detectado: vehiculoFinal?.modelo || modelo_ia || 'No identificado',
-            color_detectado:  vehiculoFinal?.color  || color_ia  || 'No identificado',
-            anio_detectado:   String(vehiculoFinal?.anio || anio_ia || 'No identificado'),
-            fuente_datos:     fuenteDatos,
+            color_detectado: vehiculoFinal?.color || color_ia || 'No identificado',
+            anio_detectado: String(vehiculoFinal?.anio || anio_ia || 'No identificado'),
+            fuente_datos: fuenteDatos,
         });
 
         return res.status(201).json({
             success: true,
             reporte: {
-                placa:           placa.toUpperCase(),
-                modelo:          multa.modelo_detectado,
-                anio:            multa.anio_detectado,
-                color:           multa.color_detectado,
+                placa: placa.toUpperCase(),
+                modelo: multa.modelo_detectado,
+                anio: multa.anio_detectado,
+                color: multa.color_detectado,
                 tipo_infraccion: tipo.join(' + '),
-                monto_multa:     `Q${monto}`,
-                estado:          'PENDIENTE',
-                fuente_datos:    fuenteDatos,
-                fecha:           multa.createdAt,
+                monto_multa: `Q${monto}`,
+                estado: 'PENDIENTE',
+                fuente_datos: fuenteDatos,
+                fecha: multa.createdAt,
             },
         });
     } catch (err) {
@@ -138,17 +138,17 @@ export const verMultasPorPlaca = async (req, res) => {
             placa: placa.toUpperCase(),
             total: multas.length,
             multas: multas.map(m => ({
-                id:              m._id,
-                placa:           m.placa,
-                tipoInfraccion:  m.tipo_infraccion,
-                velocidad:       m.velocidad,
-                pasoRojo:        m.paso_rojo,
-                montoMulta:      `Q${parseFloat(m.monto_multa).toFixed(2)}`,
-                estado:          m.estado,
+                id: m._id,
+                placa: m.placa,
+                tipoInfraccion: m.tipo_infraccion,
+                velocidad: m.velocidad,
+                pasoRojo: m.paso_rojo,
+                montoMulta: `Q${parseFloat(m.monto_multa).toFixed(2)}`,
+                estado: m.estado,
                 modeloDetectado: m.modelo_detectado,
-                colorDetectado:  m.color_detectado,
-                anioDetectado:   m.anio_detectado,
-                fecha:           m.createdAt,
+                colorDetectado: m.color_detectado,
+                anioDetectado: m.anio_detectado,
+                fecha: m.createdAt,
             })),
         });
     } catch (err) {
@@ -181,14 +181,14 @@ export const validarSaldo = async (req, res) => {
         }
 
         const saldoActual = parseFloat(cuenta.Saldo);
-        const montoMulta  = parseFloat(multa.monto_multa);
-        const tieneSaldo  = saldoActual >= montoMulta;
+        const montoMulta = parseFloat(multa.monto_multa);
+        const tieneSaldo = saldoActual >= montoMulta;
 
         return res.status(200).json({
             success: true,
-            multaId:     multa._id,
-            placa:       multa.placa,
-            montoMulta:  `Q${montoMulta.toFixed(2)}`,
+            multaId: multa._id,
+            placa: multa.placa,
+            montoMulta: `Q${montoMulta.toFixed(2)}`,
             saldoActual: `Q${saldoActual.toFixed(2)}`,
             tieneSaldo,
             message: tieneSaldo
@@ -203,18 +203,26 @@ export const validarSaldo = async (req, res) => {
 // PUT /api/v1/trafico/aumentar-multas
 export const aumentarMultas = async (req, res) => {
     try {
-        const haceCincoDias = new Date();
-        haceCincoDias.setMinutes(haceCincoDias.getMinutes() - 10);
+        const roles = req.user?.UserRoles?.map(ur => ur.Role?.Name).filter(Boolean) ?? [];
+        if (!roles.includes('ADMIN_ROLE')) {
+            return res.status(403).json({
+                success: false,
+                message: 'Acceso denegado. Solo administradores pueden aumentar multas.',
+            });
+        }
+
+        // Solo multas pendientes de MÁS de 30 minutos
+        const hace30Min = new Date(Date.now() - 30 * 60 * 1000);
 
         const multasPendientes = await Multa.find({
             estado: 'PENDIENTE',
-            createdAt: { $lte: haceCincoDias },
+            createdAt: { $lte: hace30Min },
         });
 
         if (multasPendientes.length === 0) {
             return res.status(200).json({
                 success: true,
-                message: 'No hay multas pendientes que requieran aumento',
+                message: 'No hay multas pendientes de más de 30 minutos',
                 actualizadas: 0,
             });
         }
@@ -228,11 +236,11 @@ export const aumentarMultas = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            message: `Se aumentó 10% a ${multasActualizadas.length} multa(s) pendiente(s)`,
+            message: `Se aumentó 10% a ${multasActualizadas.length} multa(s) con más de 30 minutos pendientes`,
             actualizadas: multasActualizadas.length,
             detalle: multasActualizadas.map(m => ({
-                id:         m._id,
-                placa:      m.placa,
+                id: m._id,
+                placa: m.placa,
                 nuevoMonto: `Q${parseFloat(m.monto_multa).toFixed(2)}`,
             })),
         });
@@ -240,7 +248,6 @@ export const aumentarMultas = async (req, res) => {
         return res.status(500).json({ success: false, error: err.message });
     }
 };
-
 // POST /api/v1/trafico/pagar/:multaId
 export const pagarMulta = async (req, res) => {
     try {
@@ -266,15 +273,15 @@ export const pagarMulta = async (req, res) => {
         }
 
         const saldoActual = parseFloat(cuenta.Saldo);
-        const montoMulta  = parseFloat(multa.monto_multa);
+        const montoMulta = parseFloat(multa.monto_multa);
 
         if (saldoActual < montoMulta) {
             return res.status(400).json({
                 success: false,
                 message: `Saldo insuficiente. Tu saldo es Q${saldoActual.toFixed(2)} y la multa es Q${montoMulta.toFixed(2)}`,
                 saldoActual: `Q${saldoActual.toFixed(2)}`,
-                montoMulta:  `Q${montoMulta.toFixed(2)}`,
-                falta:       `Q${(montoMulta - saldoActual).toFixed(2)}`,
+                montoMulta: `Q${montoMulta.toFixed(2)}`,
+                falta: `Q${(montoMulta - saldoActual).toFixed(2)}`,
             });
         }
 
@@ -286,12 +293,12 @@ export const pagarMulta = async (req, res) => {
             success: true,
             message: 'Multa pagada exitosamente',
             recibo: {
-                placa:         multa.placa,
-                monto:         `Q${montoMulta.toFixed(2)}`,
-                fechaDePago:   new Date().toLocaleString('es-GT'),
+                placa: multa.placa,
+                monto: `Q${montoMulta.toFixed(2)}`,
+                fechaDePago: new Date().toLocaleString('es-GT'),
                 saldoAnterior: `Q${saldoActual.toFixed(2)}`,
-                saldoActual:   `Q${nuevoSaldo.toFixed(2)}`,
-                estado:        'PAGADA',
+                saldoActual: `Q${nuevoSaldo.toFixed(2)}`,
+                estado: 'PAGADA',
             },
         });
     } catch (err) {
@@ -322,20 +329,20 @@ export const actualizarDatosMulta = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Multa no encontrada' });
         }
 
-        if (placa)  multa.placa            = placa.toUpperCase();
+        if (placa) multa.placa = placa.toUpperCase();
         if (modelo) multa.modelo_detectado = modelo;
-        if (color)  multa.color_detectado  = color;
-        if (anio)   multa.anio_detectado   = String(anio);
+        if (color) multa.color_detectado = color;
+        if (anio) multa.anio_detectado = String(anio);
 
         if (placa) {
             const placaLimpia = placa.toUpperCase();
             const vehiculo = await Vehiculo.findOne({ where: { placa: placaLimpia } });
             if (!vehiculo && modelo && color && anio) {
                 await Vehiculo.create({
-                    placa:  placaLimpia,
+                    placa: placaLimpia,
                     modelo: modelo,
-                    color:  color,
-                    anio:   anio,
+                    color: color,
+                    anio: anio,
                 });
             }
         }
@@ -346,11 +353,11 @@ export const actualizarDatosMulta = async (req, res) => {
             success: true,
             message: 'Datos de multa actualizados correctamente',
             multa: {
-                id:     multa._id,
-                placa:  multa.placa,
+                id: multa._id,
+                placa: multa.placa,
                 modelo: multa.modelo_detectado,
-                color:  multa.color_detectado,
-                anio:   multa.anio_detectado,
+                color: multa.color_detectado,
+                anio: multa.anio_detectado,
                 estado: multa.estado,
             },
         });
