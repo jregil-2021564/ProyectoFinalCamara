@@ -7,8 +7,8 @@ services:
     restart: always
     environment:
       POSTGRES_DB: ProyectoCamara
-      POSTGRES_USER: ${DB_USERNAMEE}
-      POSTGRES_PASSWORD: ${DB_PASSWORDD}
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: admin
     ports:
      - "5436:5432"
     volumes:

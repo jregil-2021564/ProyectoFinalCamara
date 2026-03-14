@@ -12,8 +12,8 @@ const PYTHON_CMD    = process.platform === 'win32' ? 'python' : 'python3';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/v1/camara/iniciar
-// Solo ADMIN_ROLE — activa la cámara y registra multas al cerrar
-// Body: { placa: "P-123ABC" }
+// Solo ADMIN_ROLE — activa la cámara en background
+// Body: {} (placa opcional)
 // ─────────────────────────────────────────────────────────────────────────────
 export const iniciarCamara = async (req, res) => {
   try {
@@ -30,29 +30,24 @@ export const iniciarCamara = async (req, res) => {
       });
     }
 
-    // 2. Placa requerida
-    const { placa } = req.body;
-    if (!placa?.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: 'La placa del vehículo a monitorear es requerida',
-      });
-    }
-
-    const placaLimpia = placa.trim().toUpperCase();
+    // 2. Placa opcional — si no viene, monitorea todos los vehículos
+    const { placa } = req.body ?? {};
+    const placaLimpia = placa?.trim().toUpperCase() || 'TODOS';
 
     // 3. Responder de inmediato — la cámara corre en background
     res.status(200).json({
       success: true,
-      message: `Cámara iniciada para la placa ${placaLimpia}. La ventana se abrió en el servidor.`,
+      message: `Cámara iniciada. Monitoreando: ${placaLimpia}. La ventana se abrió en el servidor.`,
       placa:   placaLimpia,
-      nota:    'Presiona Q en la ventana para cerrar. Las multas se registran automáticamente al cerrar.',
+      nota:    'Presiona Q en la ventana para cerrar. Las multas se registran automáticamente.',
     });
 
     // 4. Lanzar Python en background
-    console.log(`\n[CÁMARA] ▶ Iniciando vigilancia para placa ${placaLimpia}...`);
+    console.log(`\n[CÁMARA] ▶ Iniciando vigilancia (${placaLimpia})...`);
 
-    const proc = spawn(PYTHON_CMD, [PYTHON_SCRIPT, placaLimpia], {
+    const args = placaLimpia !== 'TODOS' ? [PYTHON_SCRIPT, placaLimpia] : [PYTHON_SCRIPT];
+
+    const proc = spawn(PYTHON_CMD, args, {
       stdio:    ['ignore', 'pipe', 'pipe'],
       detached: false,
     });
@@ -64,7 +59,6 @@ export const iniciarCamara = async (req, res) => {
     });
 
     proc.stderr.on('data', (data) => {
-      // Logs de Python en tiempo real en la consola del servidor
       process.stdout.write(`[PYTHON] ${data.toString()}`);
     });
 
@@ -95,7 +89,6 @@ export const iniciarCamara = async (req, res) => {
           return;
         }
 
-        // 5. Registrar cada multa en MongoDB
         for (const v of violations) {
           const esVelocidad = v.reason.toLowerCase().includes('velocidad');
 
@@ -155,7 +148,7 @@ export const estadoCamara = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: 'Sistema de cámara activo.',
-      uso:     'POST /api/v1/camara/iniciar con { "placa": "P-123ABC" }',
+      uso:     'POST /api/v1/camara/iniciar  —  body vacío o { "placa": "P-123ABC" }',
     });
 
   } catch (error) {

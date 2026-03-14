@@ -2,7 +2,6 @@ import cv2
 import numpy as np
 import time
 import requests
-import easyocr
 import re
 import os
 import sys
@@ -18,15 +17,15 @@ load_dotenv()
 # ═══════════════════════════════════════════════════════════
 #  CONFIGURACIÓN
 # ═══════════════════════════════════════════════════════════
-CAMARA_URL       = os.getenv("DROIDCAM_URL", "http://10.168.201.178:4747/video")
-LINEA_1_Y        = 160
-LINEA_2_Y        = 290
+CAMARA_URL       = os.getenv("DROIDCAM_URL", "http://10.151.233.201:4747/video")
+LINEA_1_Y        = 180   # Carro debe CRUZAR esta línea con semáforo rojo → multa
+LINEA_2_Y        = 320   # Segunda línea para calcular velocidad
 DISTANCIA_METROS = 5.0
 VELOCIDAD_LIMITE = 60
 API_URL          = "http://localhost:3005/api/v1/trafico/infracciones"
 COOLDOWN_SEG     = 10
 CARPETA_FOTOS    = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fotos_infracciones")
-GEMINI_API_KEY   = os.getenv("GEMINI_API_KEY", "AIzaSyAMtHZnSEkgr2XzQuHKu7k4lAkMv3Euzqs")
+GEMINI_API_KEY   = os.getenv("GEMINI_API_KEY")
 
 # ═══════════════════════════════════════════════════════════
 #  COLORES HSV
@@ -65,196 +64,122 @@ def detectar_color_roi(roi):
     return mejor if pct > 15 else "No identificado"
 
 # ═══════════════════════════════════════════════════════════
-#  INICIALIZAR MODELOS
+#  INICIALIZAR YOLO
 # ═══════════════════════════════════════════════════════════
 print("Cargando YOLO...", flush=True)
 yolo_model = YOLO('yolov8n.pt')
 print("✅ YOLO listo", flush=True)
 
-print("Cargando EasyOCR...", flush=True)
-ocr_reader = easyocr.Reader(['es', 'en'], gpu=False)
-print("✅ EasyOCR listo", flush=True)
+# ═══════════════════════════════════════════════════════════
+#  INICIALIZAR GEMINI
+# ═══════════════════════════════════════════════════════════
+if not GEMINI_API_KEY:
+    print("❌ GEMINI_API_KEY no encontrada en .env", flush=True)
+    sys.exit(1)
 
-gemini_client = None
-if GEMINI_API_KEY:
-    gemini_client = genai.Client(api_key=GEMINI_API_KEY)
-    print("✅ Gemini configurado", flush=True)
-else:
-    print("⚠️  Sin GEMINI_API_KEY — Gemini desactivado", flush=True)
-
+gemini_client = genai.Client(api_key=GEMINI_API_KEY)
+print("✅ Gemini configurado", flush=True)
 os.makedirs(CARPETA_FOTOS, exist_ok=True)
-
-# ═══════════════════════════════════════════════════════════
-#  OCR DE PLACA
-# ═══════════════════════════════════════════════════════════
-_ocr_busy = False
-
-def leer_placa_roi(roi):
-    try:
-        if roi is None or roi.size == 0:
-            return None, 0
-        h, w = roi.shape[:2]
-        big  = cv2.resize(roi, (w * 3, h * 3))
-        gray = cv2.cvtColor(big, cv2.COLOR_BGR2GRAY)
-        _, bw1 = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        bw2    = cv2.bitwise_not(bw1)
-        bw3    = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                        cv2.THRESH_BINARY, 11, 2)
-        mejor_texto, mejor_conf = None, 0
-        for img in [bw1, bw2, bw3]:
-            res = ocr_reader.readtext(
-                img,
-                allowlist='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-',
-                detail=1, paragraph=False,
-            )
-            for (_, txt, conf) in res:
-                t = re.sub(r'[^A-Z0-9\-]', '', txt.upper())
-                es_placa = (
-                    re.match(r'^[A-Z]-\d{3}[A-Z]{2,3}$', t) or
-                    re.match(r'^\d{3}-[A-Z]{3}$', t)         or
-                    re.match(r'^[A-Z]{1,3}-?\d{3,4}$', t)    or
-                    (len(t) >= 5 and conf > 0.45)
-                )
-                if es_placa and conf > mejor_conf:
-                    mejor_texto = t
-                    mejor_conf  = conf
-        return mejor_texto, mejor_conf
-    except Exception as e:
-        print(f"⚠️ OCR error: {e}", flush=True)
-        return None, 0
-
-def leer_placa_async(frame_crop, auto_id, autos_dict):
-    global _ocr_busy
-    if _ocr_busy:
-        return
-    def _run():
-        global _ocr_busy
-        _ocr_busy = True
-        try:
-            texto, conf = leer_placa_roi(frame_crop)
-            if texto and auto_id in autos_dict:
-                autos_dict[auto_id]['placa'] = texto
-                print(f"🔍 Placa OCR: {texto} ({conf:.0%})", flush=True)
-        finally:
-            _ocr_busy = False
-    threading.Thread(target=_run, daemon=True).start()
-
-# ═══════════════════════════════════════════════════════════
-#  GEMINI
-# ═══════════════════════════════════════════════════════════
-def analizar_foto_gemini(foto_path, placa_ocr, callback):
-    if gemini_client is None:
-        callback("No identificado", "No identificado", "No identificado", placa_ocr)
-        return
-
-    def _run():
-        try:
-            if not foto_path or not os.path.exists(foto_path):
-                print(f"⚠️ Foto no encontrada: {foto_path}", flush=True)
-                callback("No identificado", "No identificado", "No identificado", placa_ocr)
-                return
-
-            with open(foto_path, 'rb') as f:
-                img_bytes = f.read()
-
-            prompt = (
-                "Eres un experto en identificación de vehículos de Guatemala. "
-                "Analiza esta foto de una infracción de tráfico con mucho detalle. "
-                "Responde ÚNICAMENTE en este formato exacto, sin texto adicional:\n"
-                "MODELO: [marca y modelo exacto, ej: Chevrolet Spark, Toyota Corolla]\n"
-                "AÑO: [año exacto o rango, ej: 2015-2018]\n"
-                "COLOR: [color principal del vehículo]\n"
-                "PLACA: [número de placa exacto que ves en la imagen]\n"
-                "\n"
-                "Si no puedes identificar un campo escribe: No identificado\n"
-                "Para la PLACA si no la ves claramente escribe: No visible"
-            )
-
-            response = gemini_client.models.generate_content(
-                model="gemini-2.0-flash-lite",
-                contents=[
-                    types.Part.from_bytes(data=img_bytes, mime_type="image/jpeg"),
-                    prompt
-                ]
-            )
-
-            texto = response.text
-            print(f"🤖 Gemini:\n{texto.strip()}", flush=True)
-
-            modelo = anio = color = placa_g = None
-            for linea in texto.split('\n'):
-                l = linea.strip()
-                if l.startswith('MODELO:'):
-                    modelo  = l.replace('MODELO:', '').strip()
-                elif l.startswith('AÑO:'):
-                    anio    = l.replace('AÑO:', '').strip()
-                elif l.startswith('COLOR:'):
-                    color   = l.replace('COLOR:', '').strip()
-                elif l.startswith('PLACA:'):
-                    placa_g = l.replace('PLACA:', '').strip()
-                    if placa_g and placa_g.lower() in ['no visible', 'no identificado', 'no identificada']:
-                        placa_g = None
-
-            placa_final = placa_ocr or placa_g or None
-            callback(
-                modelo or "No identificado",
-                anio   or "No identificado",
-                color  or "No identificado",
-                placa_final,
-            )
-
-        except Exception as e:
-            print(f"⚠️ Gemini error: {e}", flush=True)
-            callback("No identificado", "No identificado", "No identificado", placa_ocr)
-
-    threading.Thread(target=_run, daemon=True).start()
 
 # ═══════════════════════════════════════════════════════════
 #  GUARDAR FOTO
 # ═══════════════════════════════════════════════════════════
-def guardar_foto(frame, placa, x1, y1, x2, y2):
-    try:
-        ts     = time.strftime("%Y%m%d_%H%M%S")
-        nombre = os.path.join(CARPETA_FOTOS, f"{placa}_{ts}.jpg")
-        foto   = frame.copy()
-        cv2.rectangle(foto, (x1, y1), (x2, y2), (0, 0, 255), 3)
-        cv2.putText(foto, f"INFRACTOR: {placa}",
-                    (x1, max(y1 - 10, 20)),
-                    cv2.FONT_HERSHEY_DUPLEX, 0.7, (0, 0, 255), 2)
-        cv2.putText(foto, time.strftime("%d/%m/%Y %H:%M:%S"),
-                    (10, foto.shape[0] - 15),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 215, 255), 2)
-        cv2.imwrite(nombre, foto, [cv2.IMWRITE_JPEG_QUALITY, 95])
-        print(f"📸 Foto: {nombre}", flush=True)
-        return nombre
-    except Exception as e:
-        print(f"⚠️ Error foto: {e}", flush=True)
-        return None
+def guardar_foto(frame, x1, y1, x2, y2):
+    ts     = time.strftime("%Y%m%d_%H%M%S")
+    nombre = os.path.join(CARPETA_FOTOS, f"INFRACCION_{ts}.jpg")
+    foto   = frame.copy()
+    cv2.rectangle(foto, (x1, y1), (x2, y2), (0, 0, 255), 3)
+    cv2.putText(foto, time.strftime("%d/%m/%Y %H:%M:%S"),
+                (10, foto.shape[0] - 15),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 215, 255), 2)
+    cv2.imwrite(nombre, foto, [cv2.IMWRITE_JPEG_QUALITY, 95])
+    print(f"📸 Foto guardada: {nombre}", flush=True)
+    return nombre
 
 # ═══════════════════════════════════════════════════════════
-#  ENVIAR INFRACCIÓN
+#  GEMINI — síncrono, igual que test_placa.py
+# ═══════════════════════════════════════════════════════════
+def analizar_con_gemini(foto_path):
+    print(f"📸 Analizando imagen con Gemini...", flush=True)
+
+    with open(foto_path, "rb") as f:
+        img_bytes = f.read()
+
+    prompt = (
+        "Eres un experto en identificación de vehículos de Guatemala. "
+        "Analiza esta foto de una infracción de tráfico con mucho detalle. "
+        "Enfócate especialmente en la placa FRONTAL del vehículo. "
+        "Responde ÚNICAMENTE en este formato exacto, sin texto adicional:\n"
+        "MODELO: [marca y modelo exacto, ej: Chevrolet Spark, Toyota Corolla]\n"
+        "AÑO: [año exacto o rango, ej: 2015-2018]\n"
+        "COLOR: [color principal del vehículo]\n"
+        "PLACA: [número de placa exacto que ves en la imagen]\n"
+        "\n"
+        "Si no puedes identificar un campo escribe: No identificado\n"
+        "Para la PLACA si no la ves claramente escribe: No visible"
+    )
+
+    response = gemini_client.models.generate_content(
+        model="models/gemini-2.5-flash",
+        contents=[
+            types.Part.from_bytes(data=img_bytes, mime_type="image/jpeg"),
+            prompt,
+        ]
+    )
+
+    texto = response.text.strip()
+    print(f"\n{'='*50}", flush=True)
+    print("🤖 GEMINI:", flush=True)
+    print(texto, flush=True)
+    print('='*50 + '\n', flush=True)
+
+    modelo = anio = color = placa = None
+    for linea in texto.split('\n'):
+        l = linea.strip()
+        if l.startswith('MODELO:'):
+            modelo = l.replace('MODELO:', '').strip()
+        elif l.startswith('AÑO:'):
+            anio   = l.replace('AÑO:', '').strip()
+        elif l.startswith('COLOR:'):
+            color  = l.replace('COLOR:', '').strip()
+        elif l.startswith('PLACA:'):
+            placa  = l.replace('PLACA:', '').strip()
+            if placa and placa.lower() in ['no visible', 'no identificado', 'no identificada']:
+                placa = None
+
+    if placa:
+        placa = re.sub(r'[^A-Z0-9\-]', '', placa.upper()) or None
+
+    return (
+        modelo or "No identificado",
+        anio   or "No identificado",
+        color  or "No identificado",
+        placa  or "No identificada",
+    )
+
+# ═══════════════════════════════════════════════════════════
+#  ENVIAR MULTA
 # ═══════════════════════════════════════════════════════════
 multas_count = 0
 
-def enviar_infraccion(placa, velocidad, paso_rojo, modelo, anio, color, foto_path):
+def enviar_multa(placa, velocidad, paso_rojo, modelo, anio, color, foto_path):
     global multas_count
     try:
         payload = {
-            "placa":     placa     or "NO-DETECTADA",
+            "placa":     placa,
             "velocidad": round(float(velocidad), 2),
             "paso_rojo": paso_rojo,
-            "modelo_ia": modelo    or "No identificado",
-            "anio_ia":   anio      or "No identificado",
-            "color_ia":  color     or "No identificado",
+            "modelo_ia": modelo,
+            "anio_ia":   anio,
+            "color_ia":  color,
             "foto":      foto_path or "",
         }
         resp = requests.post(API_URL, json=payload, timeout=30)
         if resp.status_code == 201:
-            data    = resp.json()
-            reporte = data.get("reporte", {})
             multas_count += 1
+            reporte = resp.json().get("reporte", {})
             print(f"\n{'='*55}", flush=True)
-            print(f"  🚨  MULTA #{multas_count} REGISTRADA", flush=True)
+            print(f"  🚨  MULTA #{multas_count} REGISTRADA EN DB", flush=True)
             print(f"{'='*55}", flush=True)
             print(f"  Placa      : {reporte.get('placa',           'N/A')}", flush=True)
             print(f"  Modelo     : {reporte.get('modelo',          'N/A')}", flush=True)
@@ -262,47 +187,43 @@ def enviar_infraccion(placa, velocidad, paso_rojo, modelo, anio, color, foto_pat
             print(f"  Color      : {reporte.get('color',           'N/A')}", flush=True)
             print(f"  Infracción : {reporte.get('tipo_infraccion', 'N/A')}", flush=True)
             print(f"  Monto      : {reporte.get('monto_multa',     'Q0')}", flush=True)
-            print(f"  Foto       : {foto_path or 'N/A'}", flush=True)
             print(f"{'='*55}\n", flush=True)
         else:
-            print(f"❌ Servidor: {resp.status_code} — {resp.text[:120]}", flush=True)
+            print(f"❌ Error servidor: {resp.status_code} — {resp.text[:120]}", flush=True)
     except requests.exceptions.ConnectionError:
-        print("❌ Node.js no está corriendo.", flush=True)
+        print("❌ Node.js no está corriendo en puerto 3005", flush=True)
     except Exception as e:
-        print(f"❌ Error envío: {e}", flush=True)
+        print(f"❌ Error enviando multa: {e}", flush=True)
 
 # ═══════════════════════════════════════════════════════════
-#  PROCESAR INFRACCIÓN (en hilo)
+#  PROCESAR INFRACCIÓN — foto → Gemini → DB
 # ═══════════════════════════════════════════════════════════
-def procesar_infraccion(frame, x1, y1, x2, y2, velocidad, paso_rojo,
-                         placa_ocr, color_hsv, foto_existente=None):
-    placa_tmp = placa_ocr or f"TMP-{int(time.time()) % 9999:04d}"
-    # Usar foto anticipada si ya existe, si no tomar nueva
-    foto_path = foto_existente or guardar_foto(frame, placa_tmp, x1, y1, x2, y2)
+def procesar_infraccion(frame_copia, x1, y1, x2, y2,
+                        color_hsv, velocidad, paso_rojo):
+    def _run():
+        try:
+            foto_path = guardar_foto(frame_copia, x1, y1, x2, y2)
+            modelo, anio, color_g, placa = analizar_con_gemini(foto_path)
 
-    def on_gemini(modelo, anio, color_g, placa_g):
-        placa_final = placa_ocr or placa_g or "No identificada"
-        if placa_final and not placa_final.startswith("TMP-"):
-            placa_final = re.sub(r'[^A-Z0-9\-]', '', placa_final.upper())
-        color_final = color_hsv if color_hsv and color_hsv != "No identificado" else color_g
-        nonlocal foto_path
-        if foto_path and placa_tmp != placa_final:
-            nuevo_nombre = foto_path.replace(placa_tmp, placa_final)
-            try:
-                os.rename(foto_path, nuevo_nombre)
-                foto_path = nuevo_nombre
-            except Exception:
-                pass
-        enviar_infraccion(placa_final, velocidad, paso_rojo, modelo, anio, color_final, foto_path)
+            color_final = color_hsv if color_hsv and color_hsv != "No identificado" else color_g
 
-    if foto_path:
-        analizar_foto_gemini(foto_path, placa_ocr, on_gemini)
-    else:
-        enviar_infraccion(
-            placa_ocr or "No identificada", velocidad, paso_rojo,
-            "No identificado", "No identificado",
-            color_hsv or "No identificado", foto_path
-        )
+            if placa and placa != "No identificada":
+                nuevo = foto_path.replace("INFRACCION_", f"{placa}_")
+                try:
+                    os.rename(foto_path, nuevo)
+                    foto_path_final = nuevo
+                except Exception:
+                    foto_path_final = foto_path
+            else:
+                foto_path_final = foto_path
+
+            enviar_multa(placa, velocidad, paso_rojo,
+                         modelo, anio, color_final, foto_path_final)
+        except Exception as e:
+            print(f"❌ Error procesando infracción: {e}", flush=True)
+
+    threading.Thread(target=_run, daemon=True).start()
+
 # ═══════════════════════════════════════════════════════════
 #  CÁMARA
 # ═══════════════════════════════════════════════════════════
@@ -314,10 +235,10 @@ def abrir_camara(url):
 cap = abrir_camara(CAMARA_URL)
 print(f"Cámara abierta: {cap.isOpened()}", flush=True)
 print("💡 R = semáforo ROJO/VERDE   Q = salir", flush=True)
-print(f"📁 Fotos en: {os.path.abspath(CARPETA_FOTOS)}", flush=True)
+print(f"⚠️  Solo multa si el carro CRUZA L1 con semáforo rojo", flush=True)
 
 # ═══════════════════════════════════════════════════════════
-#  VARIABLES GLOBALES
+#  VARIABLES
 # ═══════════════════════════════════════════════════════════
 autos_rastreados = {}
 multas_enviadas  = set()
@@ -343,19 +264,20 @@ while True:
     frame_count += 1
     semaforo_rojo = semaforo_manual
 
-    # ── YOLO cada 6 frames ──────────────────────────────────
+    # YOLO cada 6 frames
     if frame_count % 6 == 0:
         yolo_results = yolo_model(frame, verbose=False, imgsz=320, conf=0.25)
 
-    # ── Líneas de medición ──────────────────────────────────
-    cv2.line(frame, (0, LINEA_1_Y), (ancho, LINEA_1_Y), (0, 255, 255), 2)
-    cv2.putText(frame, "LINEA 1", (10, LINEA_1_Y - 5),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
-    cv2.line(frame, (0, LINEA_2_Y), (ancho, LINEA_2_Y), (255, 0, 255), 2)
-    cv2.putText(frame, "LINEA 2", (10, LINEA_2_Y - 5),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 1)
+    # Dibujar líneas
+    color_l1 = (0, 0, 255) if semaforo_rojo else (0, 255, 255)
+    cv2.line(frame, (0, LINEA_1_Y), (ancho, LINEA_1_Y), color_l1, 2)
+    cv2.putText(frame, "L1 — cruzar aqui = MULTA" if semaforo_rojo else "L1",
+                (10, LINEA_1_Y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.45, color_l1, 1)
 
-    # ── Procesar detecciones YOLO ────────────────────────────
+    cv2.line(frame, (0, LINEA_2_Y), (ancho, LINEA_2_Y), (255, 0, 255), 2)
+    cv2.putText(frame, "L2-velocidad", (10, LINEA_2_Y - 5),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255, 0, 255), 1)
+
     if yolo_results is not None:
         for box in yolo_results[0].boxes:
             cls = int(box.cls[0])
@@ -366,176 +288,111 @@ while True:
             cx   = (x1 + x2) // 2
             cy   = (y1 + y2) // 2
             conf = float(box.conf[0])
-
-            # ID más estable
             auto_id = f"{cx // 120}_{cls}"
 
-            # ── Registrar nuevo auto ──────────────────────────
             if auto_id not in autos_rastreados:
-                roi_color = frame[y1:y2, x1:x2]
-                color_det = detectar_color_roi(roi_color)
+                color_det = detectar_color_roi(frame[y1:y2, x1:x2])
                 autos_rastreados[auto_id] = {
-                    't1':          time.time(),
-                    'cruzó':       False,
-                    'velocidad':   0.0,
-                    'placa':       None,
-                    'color':       color_det,
-                    'x1': x1, 'y1': y1, 'x2': x2, 'y2': y2,
+                    't1':           time.time(),
+                    # cy_anterior: para saber de dónde venía el carro
+                    'cy_anterior':  cy,
+                    'cruzó_l1':     cy > LINEA_1_Y,  # si ya estaba debajo no cuenta
+                    'cruzó_l2':     False,
+                    'velocidad':    0.0,
+                    'color':        color_det,
                     'ultimo_envio': 0,
+                    'procesado':    False,
                 }
             else:
                 datos = autos_rastreados[auto_id]
-                datos['x1'], datos['y1'] = x1, y1
-                datos['x2'], datos['y2'] = x2, y2
+                cy_prev = datos['cy_anterior']
+                datos['cy_anterior'] = cy
 
-                # Actualizar color cada 20 frames
                 if frame_count % 20 == 0:
-                    roi_color      = frame[y1:y2, x1:x2]
-                    datos['color'] = detectar_color_roi(roi_color)
+                    datos['color'] = detectar_color_roi(frame[y1:y2, x1:x2])
 
-                # OCR cada 25 frames si no tenemos placa
-                if not datos['placa'] and frame_count % 25 == 0:
-                    placa_y1  = max(0, y2 - int((y2 - y1) * 0.30))
-                    placa_roi = frame[placa_y1:y2, x1:x2].copy()
-                    leer_placa_async(placa_roi, auto_id, autos_rastreados)
+                # ── CRUZÓ L1: venía de arriba (cy_prev < LINEA_1_Y) y ahora está abajo ──
+                # Esto garantiza que el carro se MOVIÓ y cruzó la línea
+                # No se activa si el carro ya estaba parado debajo de L1
+                cruzo_l1_ahora = (cy_prev < LINEA_1_Y) and (cy >= LINEA_1_Y)
 
-                # ── Cruzó LINEA 1 → foto + Gemini escanea datos
-                if cy > LINEA_1_Y and not datos.get('foto_tomada'):
-                    datos['foto_tomada'] = True
-                    datos['t1']          = time.time()
-                    _f  = frame.copy()
-                    _x1, _y1, _x2, _y2 = x1, y1, x2, y2
-                    _placa   = datos['placa']
-                    placa_tmp = _placa or f"TMP-{int(time.time()) % 9999:04d}"
-                    foto_anticipada = guardar_foto(_f, placa_tmp, _x1, _y1, _x2, _y2)
-                    datos['foto_anticipada'] = foto_anticipada
-                    datos['gemini_listo']    = False
-                    datos['gemini_datos']    = None
-                    print(f"📸 Foto tomada en LINEA 1, escaneando con Gemini...", flush=True)
+                if cruzo_l1_ahora and not datos['cruzó_l1']:
+                    datos['cruzó_l1'] = True
+                    datos['t1']       = time.time()
+                    print(f"🚗 Carro cruzó L1 — semáforo {'ROJO ⛔' if semaforo_rojo else 'VERDE ✅'}", flush=True)
 
-                    # Gemini escanea en paralelo y guarda resultado
-                    # Gemini escanea en paralelo y guarda resultado
-                    def on_gemini_l1(modelo, anio, color_g, placa_g, _d=datos):
-                        _d['gemini_datos'] = {
-                            'modelo': modelo,
-                            'anio':   anio,
-                            'color':  color_g,
-                            'placa':  placa_g,
-                        }
-                        _d['gemini_listo'] = True
-                        print(f"✅ Gemini listo: {modelo} | {placa_g}", flush=True)
-
-                    analizar_foto_gemini(foto_anticipada, _placa, on_gemini_l1)
-
-                    # Si semáforo rojo → multa inmediata en LINEA 1
+                    # Solo multar si el semáforo está ROJO cuando cruza
                     if semaforo_rojo:
-                        ahora       = time.time()
-                        cooldown_ok = (ahora - datos['ultimo_envio']) > COOLDOWN_SEG
-                        if cooldown_ok:
+                        ahora = time.time()
+                        if (ahora - datos['ultimo_envio']) > COOLDOWN_SEG:
                             with multas_lock:
                                 if auto_id not in multas_enviadas:
                                     multas_enviadas.add(auto_id)
                                     datos['ultimo_envio'] = ahora
-                                    datos['multa_enviada_l1'] = True
+                                    datos['procesado']    = True
+                                    print(f"🚨 Cruzó L1 con ROJO — procesando con Gemini...", flush=True)
+                                    procesar_infraccion(
+                                        frame.copy(), x1, y1, x2, y2,
+                                        datos['color'], 0, True
+                                    )
 
-                                    def enviar_cuando_gemini_listo(d, foto, placa_ocr, color_hsv, roj):
-                                        # Esperar hasta 8 segundos a que Gemini responda
-                                        for _ in range(80):
-                                            if d.get('gemini_listo'):
-                                                break
-                                            time.sleep(0.1)
-                                        g = d.get('gemini_datos') or {}
-                                        placa_final = placa_ocr or g.get('placa') or "No identificada"
-                                        placa_final = re.sub(r'[^A-Z0-9\-]', '', placa_final.upper()) if placa_final else "No identificada"
-                                        color_final = color_hsv if color_hsv and color_hsv != "No identificado" else g.get('color', 'No identificado')
-                                        enviar_infraccion(
-                                            placa_final, 0, roj,
-                                            g.get('modelo', 'No identificado'),
-                                            g.get('anio',   'No identificado'),
-                                            color_final, foto
-                                        )
-
-                                    threading.Thread(
-    target=enviar_cuando_gemini_listo,
-    args=(datos.copy() if False else datos, foto_anticipada, _placa, datos['color'], True),
-    daemon=True
-).start()
-
-                # ── Cruzó LINEA 2 → calcular velocidad, multa si verde y rápido
-                if cy > LINEA_2_Y and not datos['cruzó']:
-                    datos['cruzó'] = True
-                    dt  = time.time() - datos.get('t1', time.time())
+                # ── CRUZÓ L2: calcular velocidad ──────────────────
+                if cy > LINEA_2_Y and not datos['cruzó_l2']:
+                    datos['cruzó_l2'] = True
+                    dt  = time.time() - datos['t1']
                     vel = min(round((DISTANCIA_METROS / dt) * 3.6, 1), 250.0) if dt > 0.05 else 0
                     datos['velocidad'] = vel
                     print(f"⚡ Velocidad: {vel} km/h", flush=True)
 
-                    # Solo multa por velocidad si semáforo VERDE y va rápido
-                    if not semaforo_rojo and vel > VELOCIDAD_LIMITE:
-                        ahora       = time.time()
-                        cooldown_ok = (ahora - datos['ultimo_envio']) > COOLDOWN_SEG
-                        if cooldown_ok:
+                    if not semaforo_rojo and vel > VELOCIDAD_LIMITE and not datos['procesado']:
+                        ahora = time.time()
+                        if (ahora - datos['ultimo_envio']) > COOLDOWN_SEG:
                             with multas_lock:
                                 if auto_id not in multas_enviadas:
                                     multas_enviadas.add(auto_id)
                                     datos['ultimo_envio'] = ahora
+                                    datos['procesado']    = True
+                                    print(f"🚨 Exceso {vel} km/h — procesando con Gemini...", flush=True)
+                                    procesar_infraccion(
+                                        frame.copy(), x1, y1, x2, y2,
+                                        datos['color'], vel, False
+                                    )
 
-                                    def enviar_velocidad(d, foto, placa_ocr, color_hsv, velocidad):
-                                        for _ in range(80):
-                                            if d.get('gemini_listo'):
-                                                break
-                                            time.sleep(0.1)
-                                        g = d.get('gemini_datos') or {}
-                                        placa_final = placa_ocr or g.get('placa') or "No identificada"
-                                        placa_final = re.sub(r'[^A-Z0-9\-]', '', placa_final.upper()) if placa_final else "No identificada"
-                                        color_final = color_hsv if color_hsv and color_hsv != "No identificado" else g.get('color', 'No identificado')
-                                        enviar_infraccion(
-                                            placa_final, velocidad, False,
-                                            g.get('modelo', 'No identificado'),
-                                            g.get('anio',   'No identificado'),
-                                            color_final, foto
-                                        )
-
-                                    threading.Thread(
-                                        target=enviar_velocidad,
-                                        args=(datos, datos.get('foto_anticipada'), datos['placa'], datos['color'], vel),
-                                        daemon=True
-                                    ).start()
-
-            # ── Dibujar bounding box ──────────────────────────
+            # Dibujar bounding box
             datos     = autos_rastreados.get(auto_id, {})
             vel_g     = datos.get('velocidad', 0)
-            placa_g   = datos.get('placa', None)
             color_g   = datos.get('color', '')
-            color_box = (0, 0, 255) if vel_g > VELOCIDAD_LIMITE else (0, 255, 0)
+            procesado = datos.get('procesado', False)
+
+            if procesado:
+                color_box = (0, 165, 255)   # naranja = ya procesado
+            elif semaforo_rojo:
+                color_box = (0, 0, 255)     # rojo
+            else:
+                color_box = (0, 255, 0)     # verde
 
             cv2.rectangle(frame, (x1, y1), (x2, y2), color_box, 2)
-            cv2.putText(frame, f"AUTO {conf:.0%}",
-                        (x1, y1 - 28), cv2.FONT_HERSHEY_SIMPLEX, 0.42, color_box, 1)
-
-            label2 = placa_g if placa_g else (f"{vel_g} km/h" if vel_g > 0 else "")
-            if label2:
-                cv2.putText(frame, label2,
-                            (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 215, 255), 2)
-
+            cv2.putText(frame, f"AUTO {conf:.0%}" + (" ✓" if procesado else ""),
+                        (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_box, 1)
+            if vel_g > 0:
+                cv2.putText(frame, f"{vel_g} km/h",
+                            (x1, y2 + 16), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 215, 255), 1)
             if color_g and color_g != "No identificado":
                 cv2.putText(frame, color_g,
-                            (x1, y2 + 16), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (200, 200, 0), 1)
-
+                            (x1, y2 + 32), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (200, 200, 0), 1)
             cv2.circle(frame, (cx, cy), 4, color_box, -1)
 
-    # ── Panel superior ───────────────────────────────────────
+    # Panel superior
     cv2.rectangle(frame, (0, 0), (ancho, 58), (20, 15, 10), -1)
     cv2.rectangle(frame, (0, 56), (ancho, 58), (0, 215, 255), -1)
     cv2.putText(frame, "SISTEMA CONTROL DE TRANSITO", (15, 24),
                 cv2.FONT_HERSHEY_DUPLEX, 0.65, (0, 215, 255), 1)
-
     est_sem = "ROJO - MULTA" if semaforo_rojo else "VERDE - OK"
     col_txt = (0, 60, 255) if semaforo_rojo else (0, 220, 0)
     cv2.putText(frame,
                 f"Multas: {multas_count}   Semaforo: {est_sem}   [R]=cambiar  [Q]=salir",
                 (15, 48), cv2.FONT_HERSHEY_SIMPLEX, 0.38, col_txt, 1)
 
-    # ── Semáforo visual ──────────────────────────────────────
     sx, sy = ancho - 70, 90
     cv2.circle(frame, (sx, sy), 22,
                (0, 0, 220) if semaforo_rojo else (0, 220, 0), -1)
@@ -543,13 +400,10 @@ while True:
     cv2.putText(frame, "SEM", (sx - 18, sy + 38),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.4, (200, 200, 200), 1)
 
-    # ── Banner rojo ──────────────────────────────────────────
     if semaforo_rojo:
         overlay = frame.copy()
-        cv2.rectangle(overlay,
-                      (ancho//2 - 215, alto - 85),
-                      (ancho//2 + 215, alto - 45),
-                      (0, 0, 180), -1)
+        cv2.rectangle(overlay, (ancho//2 - 215, alto - 85),
+                      (ancho//2 + 215, alto - 45), (0, 0, 180), -1)
         cv2.addWeighted(overlay, 0.7, frame, 0.3, 0, frame)
         cv2.putText(frame, "!  SEMAFORO EN ROJO - MULTA ACTIVA  !",
                     (ancho//2 - 200, alto - 57),
@@ -560,7 +414,16 @@ while True:
     key = cv2.waitKey(1) & 0xFF
     if key == ord('r'):
         semaforo_manual = not semaforo_manual
-        print(f"🚦 Semáforo: {'ROJO' if semaforo_manual else 'VERDE'}", flush=True)
+        if semaforo_manual:
+            print("🔴 Semáforo ROJO", flush=True)
+        else:
+            print("🟢 Semáforo VERDE", flush=True)
+            multas_enviadas.clear()
+            # Resetear cruzó_l1 para que puedan volver a ser detectados
+            for d in autos_rastreados.values():
+                d['cruzó_l1']  = False
+                d['cruzó_l2']  = False
+                d['procesado'] = False
     elif key == ord('q'):
         break
 

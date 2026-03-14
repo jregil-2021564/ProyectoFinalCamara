@@ -1,10 +1,10 @@
 {
   "info": {
-    "_postman_id": "c8bc0efc-338a-4638-831d-dc488393fbc9",
-    "name": "ProyectoFinalCamaras",
+    "_postman_id": "10ae71ab-7389-4edb-8dd0-ea7cc48e6d61",
+    "name": "ProyectoFinalCamaras Copy",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "_exporter_id": "48332491",
-    "_collection_link": "https://go.postman.co/collection/48332491-c8bc0efc-338a-4638-831d-dc488393fbc9?source=collection_link"
+    "_exporter_id": "48332520",
+    "_collection_link": "https://go.postman.co/collection/48332520-10ae71ab-7389-4edb-8dd0-ea7cc48e6d61?source=collection_link"
   },
   "item": [
     {
@@ -673,47 +673,6 @@
               ]
             },
             {
-              "name": "Solicitar Deposito",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "POST",
-                "header": [],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\r\n  \"monto\": 2000\r\n}\r\n",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "http://localhost:3005/api/v1/cuenta/solicitar-deposito",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3005",
-                  "path": [
-                    "api",
-                    "v1",
-                    "cuenta",
-                    "solicitar-deposito"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
               "name": "Ver mi Cuenta",
               "request": {
                 "auth": {
@@ -740,47 +699,6 @@
                     "v1",
                     "cuenta",
                     "mi-cuenta"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Confirmacion de Deposito",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "POST",
-                "header": [],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\r\n  \"token\": \"bb0f3dc6d9f443ea89b4418343bbc8edda84f6763a62076cb41c54edc2c61620\"\r\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "http://localhost:3005/api/v1/cuenta/confirmar-deposito",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3005",
-                  "path": [
-                    "api",
-                    "v1",
-                    "cuenta",
-                    "confirmar-deposito"
                   ]
                 }
               },
@@ -897,38 +815,6 @@
           "name": "Menu Admin",
           "item": [
             {
-              "name": "Ver Solicitudes",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:3005/api/v1/cuenta/solicitudes",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3005",
-                  "path": [
-                    "api",
-                    "v1",
-                    "cuenta",
-                    "solicitudes"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
               "name": "Iniciar camara",
               "request": {
                 "auth": {
@@ -968,71 +854,40 @@
                 }
               },
               "response": []
+            },
+            {
+              "name": "Agregar Datos del Automovil Copy",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"placa\": \"P-138KDN\",\r\n    \"modelo\": \"Chevrolet Spark\",\r\n    \"color\": \"Azul\",\r\n    \"anio\": \"2018\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "http://localhost:3005/api/v1/trafico/multas/69ad9cfcf39c3aae49802806",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "3005",
+                  "path": [
+                    "api",
+                    "v1",
+                    "trafico",
+                    "multas",
+                    "69ad9cfcf39c3aae49802806"
+                  ]
+                }
+              },
+              "response": []
             }
           ]
-        },
-        {
-          "name": "Vehiculos",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{vault:authorization-secret}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "http://localhost:3005/api/v1/trafico/vehiculos",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "3005",
-              "path": [
-                "api",
-                "v1",
-                "trafico",
-                "vehiculos"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Infracciones",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\r\n  \"placa\": \"P-123ABC\",\r\n  \"velocidad\": 85,\r\n  \"paso_rojo\": true\r\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "http://localhost:3005/api/v1/trafico/infracciones",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "3005",
-              "path": [
-                "api",
-                "v1",
-                "trafico",
-                "infracciones"
-              ]
-            }
-          },
-          "response": []
         },
         {
           "name": "Multa",
