@@ -1,25 +1,28 @@
 import api from '../../../shared/api/api'
+import axios from 'axios'
 
-// GET /auth/profile
-export const getProfile = () => api.get('/auth/profile')
+// ms-core (puerto 3006) para vehículos y multas
+const traficoApi = axios.create({
+  baseURL: import.meta.env.VITE_TRAFICO_URL || 'http://localhost:3006/api/v1',
+  headers: { 'Content-Type': 'application/json' },
+})
+traficoApi.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token')
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
+})
 
-// PUT /auth/profile — multipart (foto opcional)
-export const updateProfile = (formData) =>
-  api.put('/auth/profile', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  })
+// ── Perfil (ms-auth 3005) ─────────────────────────────────────────
+export const getProfile     = ()         => api.get('/auth/profile')
+export const updateProfile  = (formData) => api.put('/auth/profile', formData, {
+  headers: { 'Content-Type': 'multipart/form-data' },
+})
 
-// GET /trafico/vehiculos
-export const getVehiculos = () => api.get('/trafico/vehiculos')
+// ── Vehículos (ms-core 3006) ──────────────────────────────────────
+export const getVehiculos      = ()      => traficoApi.get('/trafico/vehiculos')
+export const registrarVehiculo = (data)  => traficoApi.post('/trafico/vehiculos', data)
 
-// POST /trafico/vehiculos
-export const registrarVehiculo = (data) => api.post('/trafico/vehiculos', data)
-
-// GET /trafico/multas
-export const getTodasMultas = () => api.get('/trafico/multas')
-
-// GET /trafico/multas/:placa
-export const getMultasPorPlaca = (placa) => api.get(`/trafico/multas/${placa}`)
-
-// GET /trafico/buscar/:placa
-export const buscarPorPlaca = (placa) => api.get(`/trafico/buscar/${placa}`)
+// ── Multas (ms-core 3006) ─────────────────────────────────────────
+export const getTodasMultas    = ()      => traficoApi.get('/trafico/multas')
+export const getMultasPorPlaca = (placa) => traficoApi.get(`/trafico/multas/${placa}`)
+export const buscarPorPlaca    = (placa) => traficoApi.get(`/trafico/buscar/${placa}`)
