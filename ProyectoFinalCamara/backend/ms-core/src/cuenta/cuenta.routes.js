@@ -3,6 +3,7 @@
 import { Router } from 'express';
 import { validateJWT } from '../../middlewares/validate-JWT.js';
 import { isAdmin }     from '../../middlewares/validation.js';
+import { Cuenta, SolicitudDeposito } from './cuenta.model.js'
 import {
   miCuenta,
   solicitarDeposito,
@@ -189,5 +190,38 @@ router.post('/aprobar-deposito', validateJWT, isAdmin, aprobarDeposito);
  *         description: Solicitud de depósito no encontrada
  */
 router.post('/rechazar-deposito', validateJWT, isAdmin, rechazarDeposito);
+
+// Sin validateJWT — solo key interna
+// Endpoint interno — llamado desde ms-auth al registrar usuario
+router.post('/crear-interna', async (req, res) => {
+  try {
+    const key = req.headers['x-internal-key']
+    if (key !== (process.env.INTERNAL_SECRET || 'speedcam-internal-2026')) {
+      return res.status(403).json({ success: false, message: 'No autorizado' })
+    }
+
+    const { userId } = req.body
+    if (!userId) return res.status(400).json({ success: false, message: 'userId requerido' })
+
+    const existe = await Cuenta.findOne({ where: { UserId: userId } })
+    if (existe) {
+      return res.json({ success: true, numeroCuenta: existe.NumeroCuenta, message: 'Ya existe' })
+    }
+
+    const timestamp = Date.now().toString().slice(-8)
+    const random    = Math.floor(Math.random() * 9999).toString().padStart(4, '0')
+    const c = await Cuenta.create({
+      UserId:       userId,
+      NumeroCuenta: `CTA-${timestamp}-${random}`,
+      Saldo:        0.00,
+    })
+
+    console.log(`✅ Cuenta creada internamente: ${c.NumeroCuenta} para ${userId}`)
+    return res.status(201).json({ success: true, numeroCuenta: c.NumeroCuenta })
+  } catch (err) {
+    console.error('❌ Error en crear-interna:', err.message)
+    return res.status(500).json({ success: false, error: err.message })
+  }
+})
 
 export default router;

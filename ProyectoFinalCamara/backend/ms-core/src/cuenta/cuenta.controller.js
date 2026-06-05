@@ -21,7 +21,12 @@ export const miCuenta = async (req, res) => {
   try {
     const cuenta = await Cuenta.findOne({
       where: { UserId: req.user.Id },
-      include: [{ model: User, as: 'User', attributes: ['Id', 'Name', 'Surname', 'Email'] }],
+      include: [{
+  model: User,
+  as: 'User',
+  attributes: ['Id', 'Name', 'Surname', 'Email'],
+  include: [{ model: UserProfile, as: 'UserProfile', attributes: ['Phone', 'Placa', 'ProfilePicture'] }]
+}]
     });
 
     if (!cuenta) {
@@ -29,16 +34,17 @@ export const miCuenta = async (req, res) => {
     }
 
     return res.status(200).json({
-      success: true,
-      cuenta: {
-        id:            cuenta.Id,
-        numeroCuenta:  cuenta.NumeroCuenta,
-        saldo:         `Q${parseFloat(cuenta.Saldo).toFixed(2)}`,
-        titular:       `${cuenta.User.Name} ${cuenta.User.Surname}`,
-        email:         cuenta.User.Email,
-        creadaEl:      cuenta.CreatedAt,
-      },
-    });
+  success: true,
+  cuenta: {
+    id:           cuenta.Id,
+    numeroCuenta: cuenta.NumeroCuenta,
+    saldo:        `Q${parseFloat(cuenta.Saldo).toFixed(2)}`,
+    titular:      `${cuenta.User.Name} ${cuenta.User.Surname}`,
+    email:        cuenta.User.Email,
+    placa:        cuenta.User.UserProfile?.Placa || null,  // ← agregar esto
+    creadaEl:     cuenta.CreatedAt,
+  },
+});
   } catch (error) {
     console.error('Error en miCuenta:', error);
     return res.status(500).json({ success: false, error: error.message });

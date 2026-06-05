@@ -158,20 +158,25 @@ export const createNewUser = async (userData) => {
     await transaction.commit();
 
     // ── Crear cuenta automáticamente después del commit ───────────────────────
-    try {
-      const { Cuenta } = await import('../src/cuenta/cuenta.model.js');
-      const timestamp  = Date.now().toString().slice(-8);
-      const random     = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-      await Cuenta.create({
-        UserId:       user.Id,
-        NumeroCuenta: `CTA-${timestamp}-${random}`,
-        Saldo:        0.00,
-      });
-      console.log(`✅ Cuenta creada automáticamente para usuario ${user.Id}`);
-    } catch (cuentaError) {
-      // No fallar el registro si la cuenta no se crea
-      console.error('⚠️  Error creando cuenta automática:', cuentaError.message);
-    }
+    // Reemplaza esto:
+try {
+  const { Cuenta } = await import('../src/cuenta/cuenta.model.js');
+  const timestamp  = Date.now().toString().slice(-8);
+  const random     = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+  const cuenta = await Cuenta.create({
+    UserId:       user.Id,
+    NumeroCuenta: `CTA-${timestamp}-${random}`,
+    Saldo:        0.00,
+  });
+  console.log(`✅ Cuenta creada: ${cuenta.NumeroCuenta} para ${user.Id}`);
+} catch (cuentaError) {
+  console.error('❌ ERROR COMPLETO creando cuenta:', {
+    message: cuentaError.message,
+    name:    cuentaError.name,
+    sql:     cuentaError.sql,
+    fields:  cuentaError.fields,
+  });
+}
 
     // Obtener el usuario completo con todas las relaciones
     const completeUser = await findUserById(user.Id);
@@ -210,23 +215,34 @@ export const markEmailAsVerified = async (userId) => {
         EmailVerificationToken: null,
         EmailVerificationTokenExpiry: null,
       },
-      {
-        where: { UserId: userId },
-        transaction,
-      }
+      { where: { UserId: userId }, transaction }
     );
 
     await User.update(
-      {
-        Status: true,
-      },
-      {
-        where: { Id: userId },
-        transaction,
-      }
+      { Status: true },
+      { where: { Id: userId }, transaction }
     );
 
     await transaction.commit();
+
+    // Crear cuenta si no existe (por si falló en el registro)
+    try {
+      const { Cuenta } = await import('../src/cuenta/cuenta.model.js');
+      const existe = await Cuenta.findOne({ where: { UserId: userId } });
+      if (!existe) {
+        const timestamp = Date.now().toString().slice(-8);
+        const random    = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+        await Cuenta.create({
+          UserId:       userId,
+          NumeroCuenta: `CTA-${timestamp}-${random}`,
+          Saldo:        0.00,
+        });
+        console.log(`✅ Cuenta creada al verificar email: ${userId}`);
+      }
+    } catch (cuentaError) {
+      console.error('⚠️  Error creando cuenta:', cuentaError);
+    }
+
   } catch (error) {
     await transaction.rollback();
     console.error('Error marcando email como verificado:', error);

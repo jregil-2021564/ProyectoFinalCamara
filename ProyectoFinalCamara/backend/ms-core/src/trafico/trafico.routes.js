@@ -2,6 +2,7 @@
 
 import { Router } from 'express';
 import { validateJWT } from '../../middlewares/validate-JWT.js';
+import { listarVehiculos } from './trafico.controller.js';
 import {
     registrarInfraccion,
     obtenerMultas,
@@ -287,5 +288,7 @@ router.post('/pagar/:multaId', validateJWT, pagarMulta);
  *         description: Multa no encontrada
  */
 router.put('/multas/:multaId', validateJWT, actualizarDatosMulta);
+
+router.get('/vehiculos', validateJWT, listarVehiculos);
 
 export default router;

@@ -365,3 +365,12 @@ export const actualizarDatosMulta = async (req, res) => {
         return res.status(500).json({ success: false, error: err.message });
     }
 };
+
+export const listarVehiculos = async (req, res) => {
+    try {
+        const vehiculos = await Vehiculo.findAll({ order: [['createdAt', 'DESC']] })
+        return res.status(200).json({ success: true, total: vehiculos.length, vehiculos })
+    } catch (err) {
+        return res.status(500).json({ success: false, error: err.message })
+    }
+}
