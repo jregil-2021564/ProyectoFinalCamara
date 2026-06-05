@@ -2,7 +2,7 @@
 
 import { Router } from 'express';
 import { validateJWT } from '../../middlewares/validate-JWT.js';
-import { listarVehiculos } from './trafico.controller.js';
+import { listarVehiculos, eliminarVehiculo } from './trafico.controller.js';
 import {
     registrarInfraccion,
     obtenerMultas,
@@ -291,4 +291,5 @@ router.put('/multas/:multaId', validateJWT, actualizarDatosMulta);
 
 router.get('/vehiculos', validateJWT, listarVehiculos);
 
+router.delete('/vehiculos/:id', validateJWT, eliminarVehiculo)
 export default router;
