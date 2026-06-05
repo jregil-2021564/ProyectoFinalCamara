@@ -367,10 +367,22 @@ export const actualizarDatosMulta = async (req, res) => {
 };
 
 export const listarVehiculos = async (req, res) => {
-    try {
-        const vehiculos = await Vehiculo.findAll({ order: [['createdAt', 'DESC']] })
-        return res.status(200).json({ success: true, total: vehiculos.length, vehiculos })
-    } catch (err) {
-        return res.status(500).json({ success: false, error: err.message })
-    }
+  try {
+    const vehiculos = await Vehiculo.findAll({ order: [['created_at', 'DESC']] })
+    return res.status(200).json({ success: true, total: vehiculos.length, vehiculos })
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message })
+  }
+}
+
+export const eliminarVehiculo = async (req, res) => {
+  try {
+    const { id } = req.params
+    const vehiculo = await Vehiculo.findByPk(id)
+    if (!vehiculo) return res.status(404).json({ success: false, message: 'Vehículo no encontrado' })
+    await vehiculo.destroy()
+    return res.status(200).json({ success: true, message: `Vehículo ${vehiculo.placa} eliminado` })
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message })
+  }
 }
