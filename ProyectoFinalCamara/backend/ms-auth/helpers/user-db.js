@@ -158,20 +158,20 @@ export const createNewUser = async (userData) => {
     await transaction.commit();
 
     // ── Crear cuenta automáticamente después del commit ───────────────────────
-    try {
-      const { Cuenta } = await import('../src/cuenta/cuenta.model.js');
-      const timestamp  = Date.now().toString().slice(-8);
-      const random     = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-      await Cuenta.create({
-        UserId:       user.Id,
-        NumeroCuenta: `CTA-${timestamp}-${random}`,
-        Saldo:        0.00,
-      });
-      console.log(`✅ Cuenta creada automáticamente para usuario ${user.Id}`);
-    } catch (cuentaError) {
-      // No fallar el registro si la cuenta no se crea
-      console.error('⚠️  Error creando cuenta automática:', cuentaError.message);
-    }
+    // Después del await transaction.commit() en createNewUser:
+try {
+  await fetch(`${process.env.MS_CORE_URL || 'http://localhost:3006'}/api/v1/cuenta/crear-interna`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-internal-key': process.env.INTERNAL_SECRET || 'speedcam-internal-2026',
+    },
+    body: JSON.stringify({ userId: user.Id }),
+  })
+  console.log(`✅ Cuenta solicitada a ms-core para ${user.Id}`)
+} catch (cuentaError) {
+  console.error('⚠️ Error llamando ms-core para crear cuenta:', cuentaError.message)
+}
 
     // Obtener el usuario completo con todas las relaciones
     const completeUser = await findUserById(user.Id);
@@ -210,30 +210,37 @@ export const markEmailAsVerified = async (userId) => {
         EmailVerificationToken: null,
         EmailVerificationTokenExpiry: null,
       },
-      {
-        where: { UserId: userId },
-        transaction,
-      }
+      { where: { UserId: userId }, transaction }
     );
 
     await User.update(
-      {
-        Status: true,
-      },
-      {
-        where: { Id: userId },
-        transaction,
-      }
+      { Status: true },
+      { where: { Id: userId }, transaction }
     );
 
     await transaction.commit();
+
+    // Crear cuenta en ms-core via HTTP
+    try {
+      await fetch(`${process.env.MS_CORE_URL || 'http://localhost:3006'}/api/v1/cuenta/crear-interna`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-internal-key': process.env.INTERNAL_SECRET || 'speedcam-internal-2026',
+        },
+        body: JSON.stringify({ userId }),
+      })
+      console.log(`✅ Cuenta creada en ms-core para ${userId}`)
+    } catch (cuentaError) {
+      console.error('⚠️ Error creando cuenta en ms-core:', cuentaError.message)
+    }
+
   } catch (error) {
     await transaction.rollback();
     console.error('Error marcando email como verificado:', error);
     throw new Error('Error al verificar email');
   }
 };
-
 export const updatePasswordResetToken = async (userId, token, expiry) => {
   try {
     await UserEmail.update(

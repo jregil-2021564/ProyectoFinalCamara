@@ -202,3 +202,51 @@ export const getProfileById = asyncHandler(async (req, res) => {
     data: user,
   });
 });
+
+export const updateProfile = asyncHandler(async (req, res) => {
+  try {
+    const userId = req.user?.Id ?? req.user?.id
+    const { name, surname, phone } = req.body
+ 
+    const { UserProfile, User } = await import('../users/user.model.js')
+    const { uploadImage } = await import('../../helpers/cloudinary-service.js')
+ 
+    // Actualizar nombre/apellido en User
+    if (name || surname) {
+      await User.update(
+        { ...(name && { Name: name }), ...(surname && { Surname: surname }) },
+        { where: { Id: userId } }
+      )
+    }
+ 
+    // Actualizar teléfono o foto en UserProfile
+    const profileUpdates = {}
+    if (phone) profileUpdates.Phone = phone
+ 
+    if (req.file) {
+      try {
+        const cloudinaryUrl = await uploadImage(req.file.path, `profile-${userId}`)
+        profileUpdates.ProfilePicture = cloudinaryUrl
+      } catch (e) {
+        console.error('Error subiendo foto:', e)
+      }
+    }
+ 
+    if (Object.keys(profileUpdates).length > 0) {
+      await UserProfile.update(profileUpdates, { where: { UserId: userId } })
+    }
+ 
+    // Devolver perfil actualizado
+    const { getUserProfileHelper } = await import('../../helpers/profile-operations.js')
+    const user = await getUserProfileHelper(userId)
+ 
+    return res.status(200).json({
+      success: true,
+      message: 'Perfil actualizado correctamente',
+      data: user,
+    })
+  } catch (error) {
+    console.error('Error updating profile:', error)
+    return res.status(500).json({ success: false, message: 'Error al actualizar perfil' })
+  }
+})

@@ -260,6 +260,13 @@ router.post(
  */
 router.get('/profile', validateJWT, authController.getProfile);
 
+router.put(
+  '/profile',
+  validateJWT,
+  upload.single('profilePicture'),
+  handleUploadError,
+  authController.updateProfile
+);
 /**
  * @swagger
  * /api/v1/auth/profile/by-id:
