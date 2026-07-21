@@ -1,0 +1,51 @@
+{
+  "expo": {
+    "name": "app-movil-proyectocamara",
+    "slug": "app-movil-proyectocamara",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "scheme": "appmovilproyectocamara",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.proyectocamara.clientuser",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Usamos la cámara para que puedas tomarte una foto de perfil.",
+        "NSPhotoLibraryUsageDescription": "Usamos tu galería para que puedas elegir una foto de perfil."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "package": "com.proyectocamara.clientuser",
+      "permissions": ["CAMERA", "READ_EXTERNAL_STORAGE", "READ_MEDIA_IMAGES"]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "single",
+      "entry": "index.js"
+    },
+    "plugins": [
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Usamos tu galería para que puedas elegir una foto de perfil.",
+          "cameraPermission": "Usamos la cámara para que puedas tomarte una foto de perfil."
+        }
+      ]
+    ]
+  }
+}
