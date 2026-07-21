@@ -243,7 +243,7 @@ export const markEmailAsVerified = async (userId) => {
 };
 export const updatePasswordResetToken = async (userId, token, expiry) => {
   try {
-    await UserEmail.update(
+    await UserPasswordReset.update(
       {
         PasswordResetToken: token,
         PasswordResetTokenExpiry: expiry,
