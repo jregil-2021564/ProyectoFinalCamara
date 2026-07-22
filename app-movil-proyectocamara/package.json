@@ -40,11 +40,5 @@
     "eslint": "^9.0.0",
     "eslint-config-expo": "^8.0.0",
     "babel-preset-expo": "~55.0.23"
-  },
-  "pnpm": {
-    "overrides": {
-      "react": "19.2.0",
-      "react-dom": "19.2.0"
-    }
   }
 }
