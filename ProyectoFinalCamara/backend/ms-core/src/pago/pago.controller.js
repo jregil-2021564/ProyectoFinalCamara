@@ -7,26 +7,9 @@ import { Tarjeta }      from '../saldo/tarjeta.model.js';
 import { findUserById } from '../../helpers/user-db.js';
 import { generarVoucherPDF } from '../../helpers/voucher-pdf.js';
 import mongoose         from 'mongoose';
-import nodemailer       from 'nodemailer';
-import { config }       from '../../configs/config.js';
+import { sendViaBrevo } from '../../helpers/brevo-client.js';
 
 const getUserId = (req) => String(req.user?.Id ?? req.user?.id ?? '').trim();
-
-// Transporter (mismo SMTP que ya tienes)
-const createTransporter = () => {
-  if (!config.smtp.username || !config.smtp.password) return null;
-  return nodemailer.createTransport({
-    host:    config.smtp.host,
-    port:    config.smtp.port,
-    secure:  config.smtp.enableSsl,
-    auth:    { user: config.smtp.username, pass: config.smtp.password },
-    connectionTimeout: 10_000,
-    greetingTimeout:   10_000,
-    socketTimeout:     10_000,
-    tls: { rejectUnauthorized: false },
-  });
-};
-const transporter = createTransporter();
 
 // ── POST /api/v1/pagos/pagar-multa ───────────────────────────────────────────
 export const pagarMulta = async (req, res) => {
@@ -194,14 +177,8 @@ export const pagarMulta = async (req, res) => {
           referencia,
         });
 
-        if (!transporter) {
-          console.warn('[PAGO] SMTP no configurado — correo no enviado');
-          return;
-        }
-
-        // Enviar correo con PDF adjunto
-        await transporter.sendMail({
-          from:    `${config.smtp.fromName} <${config.smtp.fromEmail}>`,
+        // Enviar correo con PDF adjunto (vía Brevo)
+        await sendViaBrevo({
           to:      emailUsuario,
           subject: `✅ Multa pagada — Placa ${multa.placa} — Q${montoMulta.toFixed(2)}`,
           html: `
@@ -256,9 +233,8 @@ export const pagarMulta = async (req, res) => {
           `,
           attachments: [
             {
-              filename:    `voucher-multa-${multa.placa}-${Date.now()}.pdf`,
-              content:     pdfBuffer,
-              contentType: 'application/pdf',
+              filename: `voucher-multa-${multa.placa}-${Date.now()}.pdf`,
+              content:  pdfBuffer,
             },
           ],
         });
