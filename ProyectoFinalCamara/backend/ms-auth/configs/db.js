@@ -10,11 +10,17 @@ dotenv.config();
 export const sequelize = new Sequelize({
   dialect: 'postgres',
   host: process.env.DB_HOST,
-  port: process.env.DB_PORT,
+  port: Number(process.env.DB_PORT),
   database: process.env.DB_NAME,
   username: process.env.DB_USERNAME,
   password: process.env.DB_PASSWORD,
   logging: process.env.DB_SQL_LOGGING === 'true' ? console.log : false,
+  dialectOptions: process.env.DB_SSL === 'true' ? {
+    ssl: {
+      require: true,
+      rejectUnauthorized: false,
+    },
+  } : {},
   define: {
     freezeTableName: true,
     timestamps: true,
@@ -65,12 +71,10 @@ const connectPostgres = async () => {
     console.log('PostgreSQL | Connected to PostgreSQL');
     console.log('PostgreSQL | Connection to database established');
 
-    // Sincronizar modelos en desarrollo
-    if (process.env.NODE_ENV === 'development') {
-      const syncLogging = process.env.DB_SQL_LOGGING === 'true' ? console.log : false;
-      await sequelize.sync({ alter: true, logging: syncLogging });
-      console.log('PostgreSQL | Models synchronized with database');
-    }
+    // Sincronizar modelos (siempre, sin importar el entorno)
+    const syncLogging = process.env.DB_SQL_LOGGING === 'true' ? console.log : false;
+    await sequelize.sync({ alter: true, logging: syncLogging });
+    console.log('PostgreSQL | Models synchronized with database');
   } catch (error) {
     console.error('PostgreSQL | Could not connect to PostgreSQL');
     console.error('PostgreSQL | Error:', error.message);
@@ -87,10 +91,10 @@ const connectMongoDB = async () => {
     }
 
     console.log('MongoDB | URI:', process.env.URI_MONGO); // Debug: ver la URI
-    
+
     // Setup listeners ANTES de conectar
     setupMongooseListeners();
-    
+
     // Intentar conectar
     await mongoose.connect(process.env.URI_MONGO, {
       serverSelectionTimeoutMS: 10000, // Aumentado a 10 segundos
@@ -113,20 +117,20 @@ export const dbConnection = async () => {
   try {
     // Conectar PostgreSQL primero
     await connectPostgres();
-    
+
     // Luego MongoDB
     await connectMongoDB();
-    
+
     console.log('All database connections established successfully');
   } catch (error) {
     console.error('Database connection error:', error.message);
-    
+
     // No salir inmediatamente, mostrar qué falló
     if (error.message.includes('MongoDB')) {
       console.error('MongoDB connection failed. Check if MongoDB is running.');
       console.error('Try: mongod --dbpath /path/to/your/data');
     }
-    
+
     process.exit(1);
   }
 };
@@ -134,17 +138,17 @@ export const dbConnection = async () => {
 // ==================== Graceful Shutdown ====================
 const gracefulShutdown = async (signal) => {
   console.log(`\nReceived ${signal}. Closing database connections...`);
-  
+
   try {
     const promises = [];
-    
+
     // Cerrar PostgreSQL
     promises.push(
       sequelize.close()
         .then(() => console.log('PostgreSQL | Connection closed successfully'))
         .catch(err => console.error('PostgreSQL | Error closing:', err.message))
     );
-    
+
     // Cerrar MongoDB solo si está conectado
     if (mongoose.connection.readyState !== 0) {
       promises.push(
@@ -153,9 +157,9 @@ const gracefulShutdown = async (signal) => {
           .catch(err => console.error('MongoDB | Error closing:', err.message))
       );
     }
-    
+
     await Promise.all(promises);
-    
+
     console.log('All database connections closed successfully');
     process.exit(0);
   } catch (error) {

@@ -10,6 +10,7 @@ COPY ProyectoFinalCamara/backend/ms-core/package.json ./ProyectoFinalCamara/back
 RUN pnpm install
 
 COPY . .
+RUN sed -i 's/\r$//' fix-symlinks.sh
 RUN sh fix-symlinks.sh
 
 ARG SERVICE
