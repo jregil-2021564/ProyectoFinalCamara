@@ -1,18 +1,20 @@
 {
   "expo": {
     "name": "app-movil-proyectocamara",
-    "slug": "app-movil-proyectocamara",
+    "slug": "proyecto-camara",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/logoappkinal.png",
     "userInterfaceStyle": "light",
     "scheme": "appmovilproyectocamara",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/logoappkinal.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.proyectocamara.clientuser",
@@ -24,12 +26,17 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
+        "foregroundImage": "./assets/logoappkinal.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "package": "com.proyectocamara.clientuser",
-      "permissions": ["CAMERA", "READ_EXTERNAL_STORAGE", "READ_MEDIA_IMAGES"]
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -46,6 +53,12 @@
           "cameraPermission": "Usamos la cámara para que puedas tomarte una foto de perfil."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "ea1a2082-5132-40ab-8e62-091e03c59662"
+      }
+    },
+    "owner": "proyecto-bancario-2026-g3"
   }
 }
