@@ -1,0 +1,11 @@
+{
+  "name": "proyecto-camara",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --parallel -r run dev",
+    "dev:frontend": "pnpm --filter react-app-proyectocamara run dev",
+    "dev:backend": "pnpm --parallel --filter ms-auth --filter ms-core run dev",
+    "build": "pnpm --filter react-app-proyectocamara run build",
+    "lint": "pnpm --parallel -r run lint"
+  }
+}

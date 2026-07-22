@@ -67,6 +67,8 @@ const connectPostgres = async () => {
 
     // Sincronizar modelos en desarrollo
     if (process.env.NODE_ENV === 'development') {
+      // Stagger: esperar ~3s para evitar race condition con ms-auth
+      await new Promise(r => setTimeout(r, 3000));
       const syncLogging = process.env.DB_SQL_LOGGING === 'true' ? console.log : false;
       await sequelize.sync({ alter: true, logging: syncLogging });
       console.log('PostgreSQL | Models synchronized with database');

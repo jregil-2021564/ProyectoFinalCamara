@@ -1,0 +1,9 @@
+packages:
+  - 'react-app-proyectocamara'
+  - 'ProyectoFinalCamara/backend/ms-auth'
+  - 'ProyectoFinalCamara/backend/ms-core'
+
+allowBuilds:
+  argon2: true
+  esbuild: true
+  '@scarf/scarf': false
